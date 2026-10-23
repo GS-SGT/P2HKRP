@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFFFFF">
+<title>P2H KRP Driver</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Tema korporat energi: biru sebagai warna utama, hijau untuk status baik, merah untuk bahaya.
+   Header putih dengan garis tiga warna, kartu putih bersih, tanpa ilustrasi. */
+:root{
+  --bg:#F3F6FA; --surface:#FFFFFF; --sunk:#F5F7FA; --ink:#14243A; --muted:#5D6B7E; --line:#DDE3EB;
+  --brand:#00539B; --brand-2:#0072BC; --brand-ink:#FFFFFF; --brand-soft:#E8F1FA;
+  --head:#FFFFFF; --head-ink:#14243A; --head-muted:#5D6B7E;
+  --accent:#0067B3; --accent-2:#1680C9; --accent-ink:#FFFFFF; --accent-soft:#E8F1FA;
+  --red:#E31E26; --green:#6AB023;
+  --plate:#FFFFFF; --plate-ink:#00539B;
+  --sel:#00539B; --sel-ink:#FFFFFF;
+  --ok:#2E8B3A; --ok-bg:#E6F4E8; --warn:#B36B00; --warn-bg:#FFF3DC; --bad:#D0202A; --bad-bg:#FDE8E8;
+  --wa:#DCF8C6; --wa-ink:#111B21; --wa-bg:#E9E2D8;
+  --shadow:0 1px 2px rgba(20,36,58,.05),0 4px 14px rgba(20,36,58,.06);
+  --f-display:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-body:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0B1420; --surface:#121E2D; --sunk:#0F1926; --ink:#E6ECF3; --muted:#97A6B8; --line:#233247;
+  --brand:#3B8FD6; --brand-2:#5AA6E6; --brand-ink:#FFFFFF; --brand-soft:#132C47;
+  --head:#121E2D; --head-ink:#E6ECF3; --head-muted:#97A6B8;
+  --accent:#2F86D1; --accent-2:#4A9BE0; --accent-ink:#FFFFFF; --accent-soft:#132C47;
+  --red:#F04A50; --green:#86C64A;
+  --plate:#0F1926; --plate-ink:#7FBDF0;
+  --sel:#3B8FD6; --sel-ink:#FFFFFF;
+  --ok:#4CC26A; --ok-bg:#12301C; --warn:#F2B04D; --warn-bg:#33250F; --bad:#FF6B6B; --bad-bg:#3A1717;
+  --wa:#1F4D3A; --wa-ink:#E9EDEF; --wa-bg:#0E1A16; --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark}}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--head)}
+img{max-width:100%}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit}
+.wrap{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+svg{fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+/* Header */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--head);color:var(--head-ink);box-shadow:0 1px 0 var(--line)}
+header.top .wrap{padding-block:10px;display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:56px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:36px;height:36px;border-radius:9px;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center}
+.logo svg{width:22px;height:22px;stroke-width:2.2}
+.brand b{font-family:var(--f-display);font-weight:800;font-size:17px;letter-spacing:.01em;display:block;line-height:1.1;color:var(--brand)}
+.brand small{font-size:12px;color:var(--head-muted)}
+.back{background:none;border:0;color:var(--head-ink);display:flex;align-items:center;gap:4px;font-weight:600;cursor:pointer;padding:6px 8px 6px 0}
+.back svg{width:22px;height:22px}
+.who{display:flex;align-items:center;gap:8px;min-width:0}
+.who span:not(.plate){font-size:12px;color:var(--head-muted);white-space:nowrap}
+.hazard{height:4px;background:linear-gradient(90deg,var(--brand) 0 60%,var(--green) 60% 80%,var(--red) 80% 100%)}
+main .wrap{padding-block:16px 28px;display:flex;flex-direction:column;gap:14px}
+
+/* Nomor lambung bergaya stiker pintu unit */
+.plate{display:inline-flex;align-items:center;font-family:var(--f-mono);font-weight:500;letter-spacing:.04em;background:var(--plate);color:var(--plate-ink);border:1.5px solid var(--plate-ink);border-radius:6px;padding:2px 8px;font-size:13px;line-height:1.2;white-space:nowrap}
+.plate.lg{font-size:18px;padding:4px 12px;border-radius:8px;background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.55)}
+
+/* Tipografi */
+h1,h2,h3{font-family:var(--f-display);font-weight:800;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:25px;line-height:1.15}
+h2{font-size:17px;line-height:1.25;font-weight:700}
+h3{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-family:var(--f-body);font-weight:700}
+p{margin:0}
+.muted{color:var(--muted)} .small{font-size:13px} .mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+/* Kartu & form */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
+label.f{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:13px;color:var(--muted)}
+.req::after{content:" *";color:var(--bad)}
+input[type=text],input[type=number],input[type=tel],input[type=date],select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--sunk);border:1.5px solid var(--line);border-radius:12px;padding:12px 13px;width:100%;min-width:0;transition:border-color .15s}
+input:focus,textarea:focus{border-color:var(--accent);outline:none}
+textarea{min-height:84px;resize:vertical}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.err{color:var(--bad);font-size:13px;font-weight:600}
+
+.btn{font-family:var(--f-body);font-weight:700;font-size:16px;letter-spacing:.01em;border:0;border-radius:10px;padding:14px 16px;cursor:pointer;background:var(--accent);color:var(--accent-ink);width:100%;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 6px -2px rgba(0,83,155,.45)}
+.btn:hover{background:var(--accent-2)}
+.btn svg{width:20px;height:20px;stroke-width:2.2}
+.btn.sec{background:var(--surface);color:var(--brand);border:1.5px solid var(--line);box-shadow:none}
+.btn.sec:hover{background:var(--brand-soft)}
+.btn.bad{background:var(--bad);color:#fff;box-shadow:none}
+.btn.sm{font-size:13px;padding:7px 12px;width:auto;border-radius:8px}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.link{background:none;border:0;color:var(--ink);font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:4px}
+
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;letter-spacing:.02em;padding:4px 10px;border-radius:999px;white-space:nowrap}
+.chip.ok{background:var(--ok-bg);color:var(--ok)} .chip.warn{background:var(--warn-bg);color:var(--warn)} .chip.bad{background:var(--bad-bg);color:var(--bad)} .chip.na{background:var(--sunk);color:var(--muted);border:1px solid var(--line)}
+
+/* Hero beranda */
+.hero{position:relative;overflow:hidden;border-radius:16px;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;padding:18px 18px 22px;display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow)}
+.hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:5px;background:linear-gradient(90deg,var(--brand) 0 60%,var(--green) 60% 80%,var(--red) 80% 100%);filter:brightness(1.15)}
+.hero::before{content:"";position:absolute;right:-60px;top:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.14),rgba(255,255,255,0) 70%)}
+.hero .date{font-size:13px;color:rgba(255,255,255,.8)}
+.hero h1{font-size:24px;color:#fff}
+.hero-id{display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:relative;z-index:1}
+.hero-id .meta{font-size:13px;color:rgba(255,255,255,.85);line-height:1.4}
+.hero .edit{margin-left:auto;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:8px;padding:6px 12px;font-weight:600;font-size:13px;cursor:pointer}
+
+/* Menu */
+.tiles{display:grid;gap:12px}
+.tile{position:relative;overflow:hidden;display:grid;grid-template-columns:52px 1fr 22px;align-items:center;gap:14px;padding:16px;border-radius:14px;text-align:left;border:0;cursor:pointer;box-shadow:var(--shadow);transition:transform .12s}
+.tile:active{transform:scale(.98)}
+.tile:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.tile .ic{width:52px;height:52px;border-radius:12px;display:grid;place-items:center}
+.tile .ic svg{width:26px;height:26px}
+.tile h2{font-size:18px}
+.tile p{font-size:14px;margin-top:2px}
+.tile .meta{display:block;margin-top:8px}
+.tile>svg{width:22px;height:22px;opacity:.7}
+.tile.p2h{background:var(--surface);color:var(--ink);border:1.5px solid var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+.tile.p2h .ic{background:var(--brand);color:#fff}
+.tile.p2h p{color:var(--muted)}
+.tile.p2h>svg{color:var(--brand);opacity:1}
+.tile.lapor{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.tile.lapor .ic{background:var(--bad-bg);color:var(--red)}
+.tile.lapor p{color:var(--muted)}
+
+/* Pesan keselamatan */
+.tip{display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:center;background:var(--brand-soft);border-left:4px solid var(--green);border-radius:12px;padding:14px 16px}
+.tip .ic{width:40px;height:40px;border-radius:10px;background:var(--green);color:#fff;display:grid;place-items:center}
+.tip .ic svg{width:24px;height:24px}
+.tip b{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--brand)}
+.tip p{font-weight:600;font-size:14px}
+
+.feed{display:flex;flex-direction:column}
+.feed-i{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.feed-i:last-child{border-bottom:0}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)}
+.feed-i .t{flex:1;min-width:0} .feed-i .t b{display:block;font-size:14px} .feed-i .t span{font-size:12px;color:var(--muted)}
+
+/* Alur */
+.flowtitle{display:flex;flex-direction:column;gap:12px}
+.flowtitle .sub{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:14px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 6px}
+.steps div{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:700;color:var(--muted);text-align:center;position:relative}
+.steps div::before{content:attr(data-n);width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--sunk);border:2px solid var(--line);font-size:13px;color:var(--muted);position:relative;z-index:1}
+.steps div:not(:last-child)::after{content:"";position:absolute;top:13px;left:calc(50% + 18px);right:calc(-50% + 18px);height:2px;background:repeating-linear-gradient(90deg,var(--line) 0 6px,transparent 6px 10px)}
+.steps .on{color:var(--ink)} .steps .on::before{background:var(--accent);border-color:var(--accent);color:#fff}
+.steps .done{color:var(--ok)} .steps .done::before{content:"✓";background:var(--ok);border-color:var(--ok);color:#fff}
+.steps .done:not(:last-child)::after{background:var(--ok)}
+.bar{position:sticky;bottom:0;z-index:4;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 0 0 100vmax color-mix(in srgb,var(--bg) 92%,transparent);clip-path:inset(-1px -100vmax 0);border-top:1px solid var(--line);padding:12px 0 calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.prog{height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--brand);border-radius:4px;transition:width .25s}
+.barinfo{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);font-weight:600}
+
+/* Pertanyaan & pilihan */
+.q{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.q:last-child{border-bottom:0}
+.q p{min-width:0;font-weight:500}
+.pair{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap}
+.opt{border:1.5px solid var(--line);background:var(--surface);border-radius:12px;padding:9px 13px;font-weight:700;font-size:14px;cursor:pointer;min-width:58px;display:inline-flex;align-items:center;justify-content:center;gap:4px;transition:background .12s,border-color .12s}
+.opt svg{width:16px;height:16px;stroke-width:2.4}
+.opt[aria-pressed=true].g{background:var(--ok);border-color:var(--ok);color:#fff}
+.opt[aria-pressed=true].r{background:var(--bad);border-color:var(--bad);color:#fff}
+.opt[aria-pressed=true].n{background:var(--muted);border-color:var(--muted);color:var(--surface)}
+.opt[aria-pressed=true].a{background:var(--sel);border-color:var(--sel);color:var(--sel-ink)}
+.seg3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.seg3 .opt{min-width:0}
+.stmt{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:14px;background:var(--accent-soft);cursor:pointer;font-weight:600}
+.stmt input{width:22px;height:22px;margin:0;flex-shrink:0;accent-color:var(--accent)}
+.fuel{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.fuel .opt{min-width:0;padding:11px 0}
+
+/* Checklist */
+.cat{padding:0;gap:0;overflow:hidden}
+.cat-h{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;background:var(--brand-soft);border-bottom:1px solid var(--line);box-shadow:inset 4px 0 0 var(--brand)}
+.cat-h .n{font-size:12px;color:var(--muted);font-weight:700}
+.cat-h .n.full{color:var(--ok)}
+.item{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.item:last-child{border-bottom:0}
+.item.rusak{background:var(--bad-bg);box-shadow:inset 4px 0 0 var(--bad)}
+.item-top{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+.item-name{min-width:0;font-weight:600}
+.krit{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.06em;color:#fff;background:var(--red);border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:2px}
+.item .pair{display:grid;grid-template-columns:1fr 1.25fr 1fr;gap:6px;width:100%}
+.item .opt{min-width:0;padding:9px 6px}
+.item.lain{background:var(--warn-bg);box-shadow:inset 4px 0 0 var(--warn)}
+.opt[aria-pressed=true].w{background:var(--warn);border-color:var(--warn);color:#fff}
+.lk-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.lk-h p{font-size:13px;color:var(--muted)}
+.item-extra{display:flex;flex-direction:column;gap:8px}
+
+/* Foto */
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px}
+.photos figure{margin:0;position:relative;aspect-ratio:1;max-width:100%;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--sunk)}
+.photos img{width:100%;height:100%;object-fit:cover;display:block}
+.photos .del{position:absolute;top:4px;right:4px;border:0;border-radius:50%;width:26px;height:26px;background:rgba(0,0,0,.65);color:#fff;cursor:pointer;font-size:16px;line-height:1}
+.photos figcaption{position:absolute;inset:auto 0 0;font-size:10px;background:rgba(0,0,0,.6);color:#fff;padding:2px 5px;font-family:var(--f-mono)}
+.addphoto{aspect-ratio:1;max-width:100%;border:2px dashed var(--accent);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;position:relative;background:var(--accent-soft)}
+.addphoto svg{width:26px;height:26px}
+.addphoto input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+
+/* Kategori & urgensi */
+.chips{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.chips .opt{min-width:0;justify-content:flex-start;padding:11px 12px;font-weight:600;text-align:left}
+.urg{display:grid;gap:8px}
+.urg button{display:grid;grid-template-columns:14px 1fr;gap:4px 12px;align-items:center;text-align:left;border:1.5px solid var(--line);background:var(--surface);border-radius:14px;padding:12px 14px;cursor:pointer}
+.urg button b{font-size:16px}
+.urg button span:last-child{grid-column:2;font-size:13px;color:var(--muted)}
+.urg .dot{width:14px;height:14px}
+.urg button[aria-pressed=true]{border-width:2.5px;padding:11px 13px}
+.urg button[aria-pressed=true][data-v=Kritis]{border-color:var(--bad);background:var(--bad-bg)}
+.urg button[aria-pressed=true][data-v=Sedang]{border-color:var(--warn);background:var(--warn-bg)}
+.urg button[aria-pressed=true][data-v=Ringan]{border-color:var(--ok);background:var(--ok-bg)}
+
+/* Ringkasan & hasil */
+.status{border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;border-left:6px solid}
+.status.ok{background:var(--ok-bg);border-color:var(--ok)} .status.warn{background:var(--warn-bg);border-color:var(--warn)} .status.bad{background:var(--bad-bg);border-color:var(--bad)}
+.status strong{font-family:var(--f-display);font-size:17px;letter-spacing:.01em;font-weight:800}
+.status.ok strong{color:var(--ok)} .status.warn strong{color:var(--warn)} .status.bad strong{color:var(--bad)}
+.find{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.find:last-child{border-bottom:0}
+.find img{width:56px;height:56px;border-radius:10px;object-fit:cover;flex-shrink:0}
+.find div{min-width:0} .find b{display:block} .find span{font-size:13px;color:var(--muted)}
+.result{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:18px 8px 6px}
+.big{width:96px;height:96px;border-radius:50%;display:grid;place-items:center;box-shadow:0 0 0 10px var(--surface)}
+.big svg{width:48px;height:48px;stroke-width:2.6}
+.big.ok{background:var(--ok-bg);color:var(--ok)} .big.warn{background:var(--warn-bg);color:var(--warn)} .big.bad{background:var(--bad-bg);color:var(--bad)}
+.result h1{font-size:24px}
+.result ul{text-align:left;margin:4px 0 0;padding-left:20px}
+.sendst{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:14px;font-weight:700;font-size:14px}
+.sendst.wait{background:var(--sunk);color:var(--muted)} .sendst.ok{background:var(--ok-bg);color:var(--ok)} .sendst.bad{background:var(--bad-bg);color:var(--bad)}
+.sendst svg{width:18px;height:18px}
+.spin{width:16px;height:16px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.wa{background:var(--wa-bg);border-radius:14px;padding:12px;margin-top:8px}
+.bubble{background:var(--wa);color:var(--wa-ink);border-radius:10px 10px 10px 2px;padding:9px 11px 6px;font-size:14px;white-space:pre-wrap;word-break:break-word;max-width:94%}
+.bubble time{display:block;text-align:right;font-size:11px;opacity:.65;margin-top:2px}
+details summary{cursor:pointer;font-weight:600;color:var(--muted);font-size:14px;padding:4px 0}
+.empty{color:var(--muted);font-size:14px;padding:6px 0}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(72px + env(safe-area-inset-top,0px));background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;z-index:20;max-width:calc(100% - 32px);text-align:center;box-shadow:var(--shadow)}
+@media (prefers-reduced-motion:no-preference){.view{animation:in .22s ease-out}@keyframes in{from{opacity:.3;transform:translateY(6px)}} .big{animation:pop .35s ease-out}@keyframes pop{from{transform:scale(.6);opacity:0}}}
+@media (prefers-reduced-motion:reduce){.spin{animation-duration:2s}}
+@media (max-width:380px){.item .opt{padding:8px 3px;font-size:13px}.item .opt svg{display:none}.tile{grid-template-columns:50px 1fr 18px}.tile .ic{width:50px;height:50px}.chips{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap" id="hdr"></div>
+  <div class="hazard" aria-hidden="true"></div>
+</header>
+<main><div class="wrap" id="app"></div></main>
+
+<script>
+/* ===== KONFIGURASI =====
+   API_URL: URL Web App Google Apps Script (berakhiran /exec).
+   Kosongkan untuk mode uji (tidak ada yang dikirim). */
+const CONFIG={API_URL:"https://script.google.com/macros/s/AKfycbxsFKi0NsN_hvyS5dLyfKwBl9nm3OVuejQOfnL7e8OwArQ8-Dbyk-biEcxU8iFXu7iK/exec"};
+
+/* Batas MCU, sesuaikan dengan aturan K3 perusahaan */
+const MCU_RULE={tidurMin:6,sisMin:90,sisMax:140,diaMin:60,diaMax:90};
+/* Checklist P2H sesuai form "Inspeksi Harian Kendaraan".
+   [nama item, kritis?, kategori laporan kerusakan]
+   Item kritis yang "Tidak Baik" = unit tidak layak jalan. */
+const P2H=[
+ {cat:"Ruangan Mesin",items:[["Oli Mesin",1,"Oli"],["Oli Power Stering",0,"Oli"],["Air Radiator",1,"Air"],["Minyak Rem",1,"Oli"],["Air Pembersih Kaca",0,"Air"],["Kondisi Baterai (Aki)",0,"Listrik"],["Tali Kipas",0,"Karet & Kertas"]]},
+ {cat:"Bagian Luar",items:[["Kondisi Body",0,"Bodi"],["Kondisi Kaca Depan",0,"Bodi"],["Wiper dan Washer",0,"Karet & Kertas"],["Plat Nomor",0,"Bodi"],["Lampu Plat Nomor",0,"Listrik"],["Lampu Dekat",1,"Listrik"],["Lampu Jauh",0,"Listrik"],["Lampu Sign",0,"Listrik"],["Lampu Darurat",0,"Listrik"],["Lampu Mundur",0,"Listrik"],["Lampu Rem",1,"Listrik"],["Kaca Spion",0,"Bodi"],["Kondisi Ban",1,"Karet & Kertas"],["Ban Cadangan",0,"Karet & Kertas"],["Suspensi",1,"Lain - lain"]]},
+ {cat:"Dalam Kabin",items:[["SIM, STNK, KIR",1,"Lain - lain"],["Sabuk Pengaman",1,"Lain - lain"],["APAR",0,"Lain - lain"],["P3K",0,"Lain - lain"],["Driver Right/ Gtrack",0,"Listrik"],["Kaca Spion Kabin",0,"Bodi"],["Klakson",1,"Listrik"],["Lampu Kabin",0,"Listrik"],["Tape & Radio",0,"Listrik"],["Kondisi AC",0,"Lain - lain"],["Kunci Roda",0,"Lain - lain"],["Dongkrak + Engkol",0,"Lain - lain"],["Segitiga Pengaman",0,"Lain - lain"],["Kebersihan",0,"Lain - lain"],["Payung",0,"Lain - lain"]]}
+];
+/* Kategori sesuai form "Pelaporan Kendaraan Perusahaan" */
+const LK=[["Bodi","Penyok, baret, kaca, spion, plat"],["Air","Radiator, air wiper, kebocoran air"],["Listrik","Lampu, aki, klakson, AC, GPS/Gtrack"],["Oli","Oli mesin, power steering, minyak rem, rembesan"],["Karet & Kertas","Ban, wiper, tali kipas, filter"],["Lain - lain","Kerusakan lain di luar kategori di atas"]];
+const SHIFT=["Pagi","Malam","Pool"];
+const TIPS=["Pakai sabuk pengaman setiap saat, termasuk penumpang.","Patuhi batas kecepatan dan rambu di area kerja.","Jaga jarak aman dengan unit di depan, terutama di jalan tambang.","Jangan gunakan HP saat mengemudi.","Mengantuk? Berhenti di tempat aman dan istirahat.","Pastikan area belakang aman sebelum mundur.","Nyalakan lampu dan rotary lamp saat unit beroperasi."];
+const MAX_FOTO={item:3,extra:5,lk:5};
+
+const FLAT=[];P2H.forEach((c,ci)=>c.items.forEach(([n,k,lk])=>FLAT.push({ci,cat:c.cat,nama:n,kritis:!!k,lk})));
+const JAWAB={B:"Baik",T:"Tidak Baik",L:"Lainnya"};
+
+/* ===== Ikon ===== */
+const IC={
+ clip:'<svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 12.5l2 2 4-4.5M9 17.5h6"/></svg>',
+ warn:'<svg viewBox="0 0 24 24"><path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.2M12 17.3v.1"/></svg>',
+ chev:'<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>',
+ back:'<svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>',
+ cam:'<svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+ check:'<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+ x:'<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+ bang:'<svg viewBox="0 0 24 24"><path d="M12 5v9M12 18.5v.1"/></svg>',
+ shield:'<svg viewBox="0 0 24 24"><path d="M12 3l7 3v5.5c0 4.4-3 7.9-7 9.5-4-1.6-7-5.1-7-9.5V6z"/><path d="M8.8 12.2l2.2 2.2 4.3-4.6"/></svg>',
+ send:'<svg viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-2.5-6.5z"/></svg>'
+};
+
+/* ===== State ===== */
+const S={nama:"",hp:"",unitNo:"",shift:"Pagi",editId:false,view:"home",step:1,
+  mcu:null,m:{},ans:{},note:{},foto:{},fotoExtra:[],catatan:"",km:"",tgl:"",result:null,
+  dmg:{ket:{},foto:{}},hasil:null,send:null,lastMsg:null,history:[],err:""};
+const KEY="p2h-krp-v2";
+const hpDigits=v=>String(v||"").replace(/\D/g,"");
+const hpOk=v=>{const d=hpDigits(v);return /^(0|62)8\d{7,12}$/.test(d)};
+try{const v=JSON.parse(localStorage.getItem(KEY)||"{}");Object.assign(S,{nama:v.nama||"",hp:v.hp||"",unitNo:v.unitNo||"",shift:v.shift||"Pagi",history:(v.history||[]).map(h=>({...h,time:new Date(h.time)}))})}catch(_){}
+S.editId=!(S.nama.trim()&&S.unitNo.trim()&&hpOk(S.hp));
+function save(){try{localStorage.setItem(KEY,JSON.stringify({nama:S.nama,hp:S.hp,unitNo:S.unitNo,shift:S.shift,history:S.history.slice(0,30)}))}catch(_){}}
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt=d=>d.toLocaleString("id-ID",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}).replace(",","");
+const hhmm=d=>d.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});
+const nama=()=>S.nama.trim(), unit=()=>S.unitNo.trim().toUpperCase();
+const lengkap=()=>nama()&&unit()&&hpOk(S.hp);
+const sameDay=d=>d.toDateString()===new Date().toDateString();
+const p2hToday=()=>S.history.find(h=>h.type==="p2h"&&h.unit===unit()&&h.shift===S.shift&&sameDay(h.time));
+function toast(t){const e=document.createElement("div");e.className="toast";e.setAttribute("role","status");e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),2400)}
+function go(v){S.view=v;S.err="";render();scrollTo(0,0)}
+function rerender(){const y=scrollY;render();scrollTo(0,y)}
+const todayISO=()=>{const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
+const tglTeks=v=>{if(!v)return "-";const d=new Date(v+"T00:00:00");return d.toLocaleDateString("id-ID",{weekday:"long",day:"2-digit",month:"2-digit",year:"numeric"})};
+const pressed=b=>`aria-pressed="${b?"true":"false"}"`;
+
+/* ===== Render ===== */
+function render(){
+  const titles={p2h:"P2H Sebelum Jalan",lapor:"Lapor Kerusakan",hasil:"Status Kiriman"};
+  $("#hdr").innerHTML=(S.view==="home"
+    ?`<div class="brand"><div class="logo">${IC.shield}</div><div><b>P2H · KRP</b><small>Pemeriksaan Harian Kendaraan</small></div></div>`
+    :`<button class="back" data-act="home" aria-label="Kembali ke beranda">${IC.back}<span>Beranda</span></button>`)
+    +(unit()&&!(S.view==="home")?`<div class="who"><span>Shift ${S.shift}</span><span class="plate">${esc(unit())}</span></div>`:"");
+  $("#app").innerHTML=`<div class="view" style="display:flex;flex-direction:column;gap:14px">${({home:vHome,p2h:vP2H,lapor:vLapor,hasil:vHasil})[S.view]()}</div>`;
+}
+
+/* ----- Beranda ----- */
+function vHome(){
+  const jam=new Date().getHours();
+  const salam=jam<11?"Selamat pagi":jam<15?"Selamat siang":jam<18?"Selamat sore":"Selamat malam";
+  const done=p2hToday(), ok=lengkap()&&!S.editId;
+  const tip=TIPS[Math.floor(Date.now()/864e5)%TIPS.length];
+  const hero=`<section class="hero">
+    <div><p class="date">${new Date().toLocaleDateString("id-ID",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p>
+    <h1>${salam}${ok?", "+esc(nama().split(/\s+/)[0]):""}</h1></div>
+    ${ok?`<div class="hero-id"><span class="plate lg">${esc(unit())}</span><span class="meta">${esc(nama())} · ${esc(S.hp.trim())}<br>Shift ${S.shift}</span><button class="edit" data-act="editId">Ubah</button></div>`
+        :`<p class="date">Isi identitas dan unit sebelum berangkat.</p>`}
+  </section>`;
+  const form=ok?"":`<section class="card">
+      <h3>Identitas & unit</h3>
+      <label class="f"><span class="req">Nama driver</span><input type="text" id="nama" data-model="nama" autocomplete="name" placeholder="Nama lengkap" value="${esc(S.nama)}"></label>
+      <label class="f"><span class="req">No. HP (WhatsApp)</span><input type="tel" id="hp" data-model="hp" autocomplete="tel" inputmode="tel" placeholder="mis. 0812xxxxxxx" value="${esc(S.hp)}"><span class="small" style="font-weight:400">Ringkasan setiap kiriman dikirim ke nomor ini.</span></label>
+      <label class="f"><span class="req">Nomor lambung</span><input type="text" id="unitNo" data-model="unitNo" autocapitalize="characters" placeholder="mis. LV-023" value="${esc(S.unitNo)}"></label>
+      <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:13px;color:var(--muted)">Shift
+        <div class="seg3">${SHIFT.map(x=>`<button class="opt a" data-act="shift" data-v="${x}" ${pressed(S.shift===x)}>${x}</button>`).join("")}</div></div>
+      ${S.err?`<p class="err">${esc(S.err)}</p>`:""}
+      <button class="btn" data-act="saveId">Simpan</button>
+    </section>`;
+  const today=S.history.filter(h=>sameDay(h.time));
+  return `${hero}${form}
+  <h3 style="margin-top:4px">Mau isi apa?</h3>
+  <div class="tiles">
+    <button class="tile p2h" data-act="startP2H" ${ok?"":"disabled"}>
+      <span class="ic">${IC.clip}</span>
+      <span><h2>P2H Sebelum Jalan</h2><p>MCU harian, lalu cek kondisi unit</p>
+        <span class="meta">${done?`<span class="chip ${done.cls}">Sudah diisi · ${esc(done.label)}</span>`:S.mcu?.fit?`<span class="chip ok">MCU fit · lanjut cek unit</span>`:`<span class="chip na">Belum diisi shift ini</span>`}</span></span>
+      ${IC.chev}</button>
+    <button class="tile lapor" data-act="startLapor" ${ok?"":"disabled"}>
+      <span class="ic">${IC.warn}</span>
+      <span><h2>Lapor Kerusakan</h2><p>Foto bukti dan keterangan kerusakan</p></span>
+      ${IC.chev}</button>
+  </div>
+  <div class="tip"><span class="ic">${IC.shield}</span><div><b>Pesan keselamatan</b><p>${esc(tip)}</p></div></div>
+  <section class="card"><h3>Kiriman hari ini</h3>
+    ${today.length?`<div class="feed">${today.map(h=>`<div class="feed-i"><span class="dot ${h.cls}"></span><div class="t"><b>${esc(h.judul)}</b><span>${esc(h.unit)} · ${hhmm(h.time)} · ${esc(h.label)}</span></div></div>`).join("")}</div>`
+      :`<p class="empty">Belum ada kiriman dari HP ini hari ini.</p>`}
+  </section>`;
+}
+
+/* ----- P2H ----- */
+function steps(){return `<div class="steps">${["MCU","Cek unit","Catatan & kirim"].map((t,i)=>`<div data-n="${i+1}" class="${i+1===S.step?"on":i+1<S.step?"done":""}">${t}</div>`).join("")}</div>`}
+function vP2H(){
+  if(p2hToday()) return `<h1>P2H ${esc(unit())}</h1><div class="status ok"><strong>Sudah diisi</strong><p>P2H unit ini untuk shift ${S.shift} hari ini sudah terkirim. Satu unit cukup diisi sekali per shift.</p></div><button class="btn sec" data-act="home">Kembali ke beranda</button>`;
+  const head=`<div class="flowtitle"><h1>${["Cek kesehatan","Inspeksi harian","Catatan & kirim"][S.step-1]}</h1>${steps()}</div>`;
+  return head+[vMCU,vCek,vRingkas][S.step-1]();
+}
+function yn(key,q){const v=S.m[key];return `<div class="q"><p>${q}</p><div class="pair">
+  <button class="opt g" data-act="m" data-k="${key}" data-v="tidak" ${pressed(v==="tidak")}>Tidak</button>
+  <button class="opt r" data-act="m" data-k="${key}" data-v="ya" ${pressed(v==="ya")}>Ya</button></div></div>`}
+function vMCU(){const m=S.m;
+  return `<p class="muted">Wajib diisi sebelum mengemudi. Jawab dengan jujur, ini untuk keselamatanmu.</p>
+  <section class="card">
+    <div class="row2">
+      <label class="f"><span class="req">Jam tidur (24 jam terakhir)</span><input type="number" id="tidur" data-model="m.tidur" inputmode="decimal" min="0" max="24" step="0.5" placeholder="mis. 7" value="${esc(m.tidur??"")}"></label>
+      <label class="f"><span class="req">Tensi (mmHg)</span><span style="display:flex;gap:6px;align-items:center"><input type="number" id="sis" data-model="m.sis" inputmode="numeric" placeholder="120" value="${esc(m.sis??"")}" aria-label="Sistolik"><b>/</b><input type="number" id="dia" data-model="m.dia" inputmode="numeric" placeholder="80" value="${esc(m.dia??"")}" aria-label="Diastolik"></span></label>
+    </div>
+    <div>${yn("obat","Minum obat yang bikin mengantuk?")}${yn("alkohol","Minum alkohol dalam 24 jam terakhir?")}${yn("keluhan","Ada keluhan sakit (pusing, demam, mual)?")}</div>
+    ${m.keluhan==="ya"?`<label class="f">Jelaskan keluhan<input type="text" id="ket" data-model="m.ket" value="${esc(m.ket??"")}"></label>`:""}
+    <label class="stmt"><input type="checkbox" id="siap" data-check="m.siap" ${m.siap?"checked":""}><span>Saya menyatakan dalam kondisi sehat dan siap bekerja.</span></label>
+    <p class="small muted">Batas aman: tidur minimal ${MCU_RULE.tidurMin} jam, tensi ${MCU_RULE.sisMin}–${MCU_RULE.sisMax} / ${MCU_RULE.diaMin}–${MCU_RULE.diaMax}.</p>
+  </section>
+  <div class="bar">${S.err?`<p class="err">${esc(S.err)}</p>`:""}<button class="btn" data-act="cekMCU">Cek kelayakan</button></div>`;
+}
+function photoGrid(target,arr,max,label){
+  return `<div class="photos">${arr.map((p,k)=>`<figure><img src="${p.url}" alt="${esc(label)} foto ${k+1}"><button class="del" data-act="delFoto" data-t="${target}" data-k="${k}" aria-label="Hapus foto ${k+1}">×</button><figcaption>${hhmm(p.t)}</figcaption></figure>`).join("")}
+  ${arr.length<max?`<label class="addphoto">${IC.cam}<span>${arr.length?"Tambah":"Ambil foto"}</span><input type="file" accept="image/*" capture="environment" data-foto="${target}" aria-label="Ambil foto ${esc(label)}"></label>`:""}</div>`}
+function vCek(){
+  const filled=FLAT.filter((_,i)=>S.ans[i]).length;
+  let i=0;
+  const cats=P2H.map((c,ci)=>{
+    const start=i;
+    const rows=c.items.map(([n,k])=>{const idx=i++;const a=S.ans[idx];
+      return `<div class="item ${a==="T"?"rusak":a==="L"?"lain":""}">
+        <div class="item-top"><div class="item-name">${esc(n)}${k?'<span class="krit">KRITIS</span>':""}</div>
+          <div class="pair">
+            <button class="opt g" data-act="ans" data-i="${idx}" data-v="B" ${pressed(a==="B")} aria-label="${esc(n)} baik">${IC.check}<span>Baik</span></button>
+            <button class="opt r" data-act="ans" data-i="${idx}" data-v="T" ${pressed(a==="T")} aria-label="${esc(n)} tidak baik">${IC.x}<span>Tidak Baik</span></button>
+            <button class="opt w" data-act="ans" data-i="${idx}" data-v="L" ${pressed(a==="L")} aria-label="${esc(n)} lainnya">Lainnya</button>
+          </div></div>
+        ${a==="T"?`<div class="item-extra">
+          <input type="text" id="note${idx}" data-model="note.${idx}" placeholder="Apa yang tidak baik? (wajib)" value="${esc(S.note[idx]??"")}">
+          ${photoGrid("item:"+idx,S.foto[idx]||[],MAX_FOTO.item,n)}
+          <p class="small muted">Foto bukti wajib, maksimal ${MAX_FOTO.item}.</p></div>`
+        :a==="L"?`<div class="item-extra">
+          <input type="text" id="note${idx}" data-model="note.${idx}" placeholder="Tulis kondisinya (wajib), mis. hampir habis" value="${esc(S.note[idx]??"")}">
+          ${photoGrid("item:"+idx,S.foto[idx]||[],MAX_FOTO.item,n)}
+          <p class="small muted">Foto opsional.</p></div>`:""}
+      </div>`}).join("");
+    const done=c.items.filter((_,k)=>S.ans[start+k]).length;
+    return `<section class="card cat"><div class="cat-h"><div><h2>${esc(c.cat)}</h2><span class="n ${done===c.items.length?"full":""}">${done}/${c.items.length} dicek</span></div>
+      <button class="btn sec sm" data-act="allOk" data-c="${ci}">Semua baik</button></div>${rows}</section>`;
+  }).join("");
+  return `<section class="card">
+    <div class="row2">
+      <label class="f"><span class="req">Kilometer mobil</span><input type="number" id="km" data-model="km" inputmode="numeric" placeholder="mis. 84210" value="${esc(S.km)}"></label>
+      <label class="f"><span class="req">Hari dan tanggal</span><input type="date" id="tgl" data-model="tgl" value="${esc(S.tgl)}"></label>
+    </div>
+  </section>
+  <p class="small muted">Tekan <b>Semua baik</b> per bagian, lalu ubah item yang bermasalah jadi <b>Tidak Baik</b> (wajib foto) atau <b>Lainnya</b> (tulis kondisinya).</p>
+  ${cats}
+  <div class="bar"><div class="barinfo"><span>${filled}/${FLAT.length} item dicek</span><span>${FLAT.filter((_,k)=>S.ans[k]==="T").length} tidak baik · ${FLAT.filter((_,k)=>S.ans[k]==="L").length} lainnya</span></div>
+    <div class="prog"><i style="width:${filled/FLAT.length*100}%"></i></div>
+    ${S.err?`<p class="err">${esc(S.err)}</p>`:""}
+    <button class="btn" data-act="toRingkas">Lanjut ${IC.chev}</button></div>`;
+}
+function temuanP2H(){return FLAT.map((it,i)=>({...it,i,v:S.ans[i],note:(S.note[i]||"").trim(),foto:S.foto[i]||[]})).filter(t=>t.v==="T"||t.v==="L")}
+const temuanTeks=x=>(x.v==="T"&&x.kritis?"[KRITIS] ":"")+x.nama+": "+(x.v==="T"?"Tidak baik – ":"")+x.note;
+function statusP2H(t){const krit=t.some(x=>x.kritis&&x.v==="T");
+  return krit?{cls:"bad",label:"TIDAK LAYAK JALAN",short:"Tidak layak jalan",icon:"⛔"}:t.length?{cls:"warn",label:"LAYAK JALAN DENGAN CATATAN",short:"Layak + catatan",icon:"⚠️"}:{cls:"ok",label:"LAYAK JALAN",short:"Layak jalan",icon:"✅"}}
+function vRingkas(){
+  const t=temuanP2H(),st=statusP2H(t);
+  return `<div class="status ${st.cls}"><strong>${st.label}</strong><p>${st.cls==="bad"?"Ada item kritis yang tidak baik. Unit tidak boleh dioperasikan.":st.cls==="warn"?"Unit boleh jalan, temuan akan diteruskan ke dispatcher.":"Semua item dalam kondisi baik."}</p></div>
+  <section class="card"><dl style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0">
+    <dt class="muted">Unit</dt><dd style="margin:0;font-weight:600">${esc(unit())}</dd>
+    <dt class="muted">Tanggal</dt><dd style="margin:0;font-weight:600">${esc(tglTeks(S.tgl))}</dd>
+    <dt class="muted">Kilometer</dt><dd style="margin:0;font-weight:600" class="mono">${esc(S.km)}</dd>
+    <dt class="muted">MCU</dt><dd style="margin:0"><span class="chip ok">FIT</span></dd></dl></section>
+  ${t.length?`<section class="card"><h3>Temuan (${t.length})</h3><div>${t.map(x=>`<div class="find">${x.foto[0]?`<img src="${x.foto[0].url}" alt="">`:""}<div><b>${x.v==="T"&&x.kritis?'<span class="krit" style="margin:0 6px 0 0">KRITIS</span>':""}${esc(x.nama)}</b><span>${x.v==="T"?"Tidak baik":"Lainnya"} · ${esc(x.note)} · ${x.foto.length} foto</span></div></div>`).join("")}</div>
+    <button class="link" data-act="step" data-v="2" style="align-self:flex-start">Ubah checklist</button></section>`:""}
+  <section class="card">
+    <label class="f">Catatan tambahan<textarea id="catatan" data-model="catatan" placeholder="Opsional">${esc(S.catatan)}</textarea></label>
+    <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:13px;color:var(--muted)">Foto (opsional, maksimal ${MAX_FOTO.extra})
+      ${photoGrid("extra",S.fotoExtra,MAX_FOTO.extra,"tambahan")}</div>
+  </section>
+  <div class="bar"><button class="btn" data-act="sendP2H">${IC.send} Kirim ke dispatcher</button></div>`;
+}
+
+/* ----- Lapor kerusakan ----- */
+function vLapor(){const d=S.dmg;
+  const cards=LK.map(([k,hint])=>{const ket=d.ket[k]||"",foto=d.foto[k]||[],isi=ket.trim()||foto.length;
+    return `<section class="card">
+      <div class="lk-h"><h2>${esc(k)}</h2>${isi?`<span class="chip warn">Diisi</span>`:""}</div>
+      <p class="small muted" style="margin-top:-6px">${esc(hint)}</p>
+      <textarea id="lk-${esc(k)}" data-model="dmg.ket.${esc(k)}" placeholder="Keterangan kerusakan ${esc(k.toLowerCase())}" style="min-height:64px">${esc(ket)}</textarea>
+      ${photoGrid("lk:"+k,foto,MAX_FOTO.lk,k)}
+    </section>`}).join("");
+  return `<div class="flowtitle"><h1>Lapor kerusakan</h1><p class="sub"><span class="plate">${esc(unit())}</span></p></div>
+  <section class="card"><div class="row2">
+    <label class="f"><span class="req">Hari dan tanggal pelaporan</span><input type="date" id="dtgl" data-model="dmg.tgl" value="${esc(d.tgl||"")}"></label>
+    <label class="f">Odometer<input type="number" id="dkm" data-model="dmg.km" inputmode="numeric" placeholder="Opsional" value="${esc(d.km||"")}"></label>
+  </div></section>
+  <div class="tip" style="grid-template-columns:44px 1fr"><span class="ic">${IC.cam}</span><div><b>Kategori kerusakan</b><p>Isi hanya kategori yang rusak. Beri keterangan dan foto yang jelas.</p></div></div>
+  ${cards}
+  <div class="bar">${S.err?`<p class="err">${esc(S.err)}</p>`:""}<button class="btn" data-act="sendLapor">${IC.send} Kirim laporan</button></div>`;
+}
+
+/* ----- Hasil ----- */
+function vHasil(){const h=S.hasil,st=S.send||{};
+  const ico={ok:IC.check,warn:IC.bang,bad:IC.x}[h.cls];
+  const sendst=st.state==="sending"?`<div class="sendst wait" role="status"><span class="spin"></span>Mengirim ke dispatcher…</div>`
+    :st.state==="ok"?`<div class="sendst ok" role="status">${IC.check}Terkirim ke dispatcher${st.uji?" (mode uji)":""}</div>${st.uji?"":st.driverOk===false?`<p class="small" style="color:var(--warn);text-align:center">Ringkasan ke WA kamu gagal terkirim. Cek No. HP di Beranda.</p>`:`<p class="small muted" style="text-align:center">Ringkasan juga dikirim ke WA ${esc(S.hp.trim())}.</p>`}`
+    :st.state==="err"?`<div class="sendst bad" role="alert">${IC.x}Gagal terkirim</div><p class="small" style="color:var(--bad)">${esc(st.err)}. Periksa sinyal lalu coba lagi. Data belum hilang.</p><button class="btn" data-act="retry">Kirim ulang</button>`:"";
+  return `<div class="result"><div class="big ${h.cls}">${ico}</div><h1>${esc(h.title)}</h1><p class="muted">${esc(h.sub)}</p>
+    ${h.list?.length?`<ul>${h.list.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}</div>
+  ${sendst}
+  ${st.uji?`<p class="small muted">API_URL belum diisi, jadi pesan tidak benar-benar dikirim.</p>`:""}
+  <details><summary>Lihat pesan ke dispatcher</summary><div class="wa"><div class="bubble">${esc(tampilPesan(S.lastMsg)).replace(/\*([^*\n]+)\*/g,"<b>$1</b>")}<time>${hhmm(new Date())}</time></div></div></details>
+  ${(h.actions||[]).map(a=>`<button class="btn ${a.cls||""}" data-act="${a.act}" ${st.state==="sending"?"disabled":""}>${esc(a.label)}</button>`).join("")}`;
+}
+
+/* ===== Aksi ===== */
+const ACT={
+  home:()=>go("home"),
+  editId:()=>{S.editId=true;render()},
+  shift:el=>{S.shift=el.dataset.v;rerender()},
+  saveId:()=>{if(!nama()||!unit()){S.err="Nama driver, No. HP, dan nomor lambung wajib diisi.";rerender();return}
+    if(!hpOk(S.hp)){S.err="No. HP tidak valid. Contoh: 081234567890.";rerender();return}
+    S.err="";S.unitNo=unit();S.editId=false;S.mcu=null;resetP2H();save();render();toast("Identitas disimpan")},
+  startP2H:()=>{resetP2H(false);S.tgl=todayISO();S.step=S.mcu?.fit?2:1;go("p2h")},
+  startLapor:()=>{S.dmg={ket:{},foto:{},km:S.km||"",tgl:todayISO()};go("lapor")},
+  m:el=>{S.m[el.dataset.k]=el.dataset.v;S.err="";rerender()},
+  cekMCU:()=>{const m=S.m;
+    if(m.tidur==null||m.tidur===""||!m.sis||!m.dia||!m.obat||!m.alkohol||!m.keluhan){S.err="Lengkapi jam tidur, tensi, dan semua pertanyaan.";rerender();return}
+    if(!m.siap){S.err="Centang pernyataan siap bekerja untuk melanjutkan.";rerender();return}
+    const a=[],t=+m.tidur,s=+m.sis,d=+m.dia;
+    if(t<MCU_RULE.tidurMin)a.push(`Tidur ${t} jam (minimal ${MCU_RULE.tidurMin} jam)`);
+    if(s<MCU_RULE.sisMin||s>MCU_RULE.sisMax||d<MCU_RULE.diaMin||d>MCU_RULE.diaMax)a.push(`Tensi ${s}/${d} di luar batas aman`);
+    if(m.obat==="ya")a.push("Minum obat yang menyebabkan kantuk");
+    if(m.alkohol==="ya")a.push("Minum alkohol dalam 24 jam terakhir");
+    if(m.keluhan==="ya")a.push("Keluhan sakit"+(m.ket?": "+m.ket:""));
+    S.mcu={fit:!a.length,alasan:a,tidur:t,tensi:`${s}/${d}`};S.err="";
+    if(S.mcu.fit){S.step=2;render();scrollTo(0,0);toast("MCU lolos. Lanjut cek unit.");return}
+    const id="MCU-"+stamp();
+    S.lastMsg=msgMCU("dispatcher",id);
+    S.hasil={cls:"bad",title:"Tidak fit mengemudi",sub:"Kamu belum boleh membawa kendaraan. Dispatcher diberi tahu untuk mengatur pengganti.",list:a,
+      actions:[{act:"ulangMCU",label:"Isi ulang MCU",cls:"sec"},{act:"home",label:"Kembali ke beranda",cls:"sec"}]};
+    addHistory({id,type:"mcu",judul:"MCU tidak fit",cls:"bad",label:"Tidak fit"});
+    go("hasil");
+    kirim("mcu",S.lastMsg,{id,ringkas:msgMCU("driver",id),data:{alasan:a,tidur:t,tensi:`${s}/${d}`,obat:m.obat,alkohol:m.alkohol,keluhan:m.keluhan,ket:m.ket||""}});
+  },
+  ulangMCU:()=>{S.mcu=null;S.m={};S.step=1;go("p2h")},
+  ans:el=>{S.ans[+el.dataset.i]=el.dataset.v;S.err="";rerender()},
+  allOk:el=>{const ci=+el.dataset.c;FLAT.forEach((f,i)=>{if(f.ci===ci&&!S.ans[i])S.ans[i]="B"});rerender()},
+  step:el=>{S.step=+el.dataset.v;render();scrollTo(0,0)},
+  toRingkas:()=>{
+    const miss=FLAT.filter((_,i)=>!S.ans[i]).length,t=temuanP2H();
+    const e=[];if(!S.km)e.push("kilometer");if(!S.tgl)e.push("tanggal");
+    let msg=e.length?`Isi ${e.join(" dan ")}. `:"";
+    if(miss)msg+=`${miss} item belum dicek. `;
+    if(t.some(x=>!x.note))msg+="Item Tidak Baik / Lainnya wajib diberi keterangan. ";
+    if(t.some(x=>x.v==="T"&&!x.foto.length))msg+="Item Tidak Baik wajib diberi foto.";
+    if(msg){S.err=msg.trim();rerender();return}
+    S.err="";S.step=3;render();scrollTo(0,0);
+  },
+  sendP2H:()=>{
+    const t=temuanP2H(),st=statusP2H(t),id="P2H-"+stamp();
+    S.result={id,st,t};
+    S.lastMsg=msgP2H(id,st,t,"dispatcher");
+    const photos=[];t.forEach(x=>x.foto.forEach((f,k)=>photos.push({label:x.nama+(x.foto.length>1?` (${k+1})`:""),data:f.data})));
+    S.fotoExtra.forEach((f,k)=>photos.push({label:"Foto tambahan"+(S.fotoExtra.length>1?` ${k+1}`:""),data:f.data}));
+    S.hasil={cls:st.cls,title:st.label.charAt(0)+st.label.slice(1).toLowerCase(),
+      sub:st.cls==="bad"?"Unit tidak boleh dioperasikan sampai diperbaiki.":st.cls==="warn"?"Boleh jalan. Temuan sudah diteruskan ke dispatcher.":"Selamat jalan, utamakan keselamatan.",
+      list:t.map(temuanTeks),
+      actions:[{act:"home",label:"Kembali ke beranda",cls:"sec"}]};
+    addHistory({id,type:"p2h",judul:"P2H "+unit(),cls:st.cls,label:st.short,shift:S.shift});
+    go("hasil");
+    kirim("p2h",S.lastMsg,{id,ringkas:msgP2H(id,st,t,"driver"),data:{tanggal:S.tgl,km:S.km,status:st.label,mcu:{tidur:S.mcu.tidur,tensi:S.mcu.tensi},catatan:S.catatan.trim(),
+      temuan:t.map(x=>({item:x.nama,kategori:x.cat,kritis:x.kritis,nilai:JAWAB[x.v],ket:x.note})),
+      checklist:FLAT.map((f,i)=>[f.nama,S.ans[i]==="B"?"Baik":S.ans[i]==="T"?"Tidak Baik: "+(S.note[i]||"").trim():(S.note[i]||"").trim()])},photos});
+  },
+  sendLapor:()=>{const d=S.dmg;
+    const isi=LK.map(([k])=>({k,ket:(d.ket[k]||"").trim(),foto:d.foto[k]||[]})).filter(x=>x.ket||x.foto.length);
+    let msg="";
+    if(!d.tgl)msg+="Isi tanggal pelaporan. ";
+    if(!isi.length)msg+="Isi minimal satu kategori kerusakan. ";
+    const noKet=isi.filter(x=>!x.ket).map(x=>x.k),noFoto=isi.filter(x=>!x.foto.length).map(x=>x.k);
+    if(noKet.length)msg+=`Keterangan belum diisi: ${noKet.join(", ")}. `;
+    if(noFoto.length)msg+=`Foto belum ada: ${noFoto.join(", ")}.`;
+    if(msg){S.err=msg.trim();rerender();return}
+    const id="LK-"+stamp();
+    S.lastMsg=msgLapor(id,isi,"dispatcher");
+    S.hasil={cls:"warn",title:"Laporan dibuat",sub:`No. ${id}. Dispatcher akan menindaklanjuti laporanmu.`,list:isi.map(x=>x.k+": "+x.ket.replace(/\n/g,"; ")),
+      actions:[{act:"startLapor",label:"Buat laporan lain",cls:"sec"},{act:"home",label:"Kembali ke beranda",cls:"sec"}]};
+    addHistory({id,type:"lapor",judul:"Kerusakan "+isi.map(x=>x.k).join(", "),cls:"warn",label:isi.length+" kategori"});
+    go("hasil");
+    const kerusakan={};LK.forEach(([k])=>kerusakan[k]=(d.ket[k]||"").trim());
+    const photos=[];isi.forEach(x=>x.foto.forEach((f,j)=>photos.push({label:x.k+(x.foto.length>1?` ${j+1}`:""),data:f.data})));
+    kirim("lapor",S.lastMsg,{id,ringkas:msgLapor(id,isi,"driver"),data:{tanggal:d.tgl,odometer:d.km||"",kerusakan,dariP2H:""},photos});
+  },
+  delFoto:el=>{fotoArr(el.dataset.t).splice(+el.dataset.k,1);rerender()},
+  retry:()=>S.send?.retry&&S.send.retry()
+};
+function resetP2H(full=true){S.ans={};S.note={};S.foto={};S.fotoExtra=[];S.catatan="";S.km="";S.tgl=todayISO();S.result=null;S.send=null;S.err="";if(full){S.m={};}}
+function stamp(){const d=new Date(),p=n=>String(n).padStart(2,"0");return `${p(d.getDate())}${p(d.getMonth()+1)}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`}
+function addHistory(h){S.history.unshift({unit:unit(),shift:S.shift,time:new Date(),...h});save()}
+function fotoArr(t){if(t==="extra")return S.fotoExtra;const [a,b]=t.split(/:(.*)/);if(a==="lk")return S.dmg.foto[b]||(S.dmg.foto[b]=[]);return S.foto[+b]||(S.foto[+b]=[])}
+function maxFoto(t){return MAX_FOTO[t.split(":")[0]]}
+function setPath(path,val){const k=path.split(".");let o=S;while(k.length>1){const p=k.shift();o=o[p]||(o[p]={})}o[k[0]]=val}
+
+/* Event delegation */
+const app=$("#app"),hdr=$("#hdr");
+[app,hdr].forEach(r=>r.addEventListener("click",e=>{const el=e.target.closest("[data-act]");if(!el||el.disabled)return;e.preventDefault();ACT[el.dataset.act]?.(el)}));
+app.addEventListener("input",e=>{const el=e.target;
+  if(el.dataset.model)setPath(el.dataset.model,el.value);
+  if(el.dataset.check)setPath(el.dataset.check,el.checked)});
+app.addEventListener("change",async e=>{const el=e.target;if(!el.dataset.foto)return;
+  const t=el.dataset.foto,arr=fotoArr(t),files=[...el.files].slice(0,maxFoto(t)-arr.length);
+  for(const f of files){try{arr.push({url:URL.createObjectURL(f),t:new Date(),data:await kompres(f)})}catch(_){toast("Foto tidak bisa dibaca, coba ambil ulang")}}
+  S.err="";rerender()});
+
+/* ===== Pesan WA =====
+   untuk = "dispatcher" atau "driver". Baris {FOTO} diganti server dengan link folder Google Drive. */
+const GARIS="________________";
+const gabung=a=>a.filter(x=>x!==null&&x!==undefined).join("\n");
+const stempel=()=>{const d=new Date(),p=n=>String(n).padStart(2,"0");return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()}, ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`};
+const tglSingkat=v=>{if(!v)return "-";return new Date(v+"T00:00:00").toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"})};
+const lbl=(k,v)=>(v===""||v==null)?null:`*${k}* : ${v}`;
+const daftar=(k,arr)=>!arr.length?null:arr.length===1?lbl(k,arr[0]):`*${k}* :\n`+arr.map((x,i)=>`${i+1}. ${x}`).join("\n");
+function kepala(judul,id,labelNo,pembuka){return [`– *${judul}* –`,`_Tanggal : ${stempel()}_`,"",pembuka,"",GARIS,lbl(labelNo,id),GARIS]}
+function msgMCU(untuk,id){const drv=untuk==="driver";
+  return gabung([...kepala("MCU Harian KRP",id,"No. MCU",drv?"Hasil MCU harian anda :":"Ada driver yang *tidak fit* mengemudi. Berikut detailnya :"),
+    lbl("Nama",nama()),drv?null:lbl("No. HP",S.hp.trim()),lbl("Unit",unit()),lbl("Shift",S.shift),
+    lbl("Status","⛔ Tidak fit"),daftar("Alasan",S.mcu.alasan),GARIS,
+    drv?"Anda belum boleh mengemudi. Dispatcher sudah diberi tahu, silakan istirahat.":"Mohon atur driver pengganti."])}
+function rekapP2H(){return P2H.map((c,ci)=>{const idx=FLAT.map((f,i)=>f.ci===ci?i:-1).filter(i=>i>=0),b=idx.filter(i=>S.ans[i]==="B").length;
+  return `${b===idx.length?"✅":"⚠️"} ${c.cat}: ${b}/${idx.length} baik`}).join("\n")}
+function msgP2H(id,st,t,untuk){const drv=untuk==="driver";
+  const stTeks={ok:"✅ Layak jalan",warn:"⚠️ Layak jalan dengan catatan",bad:"⛔ Tidak layak jalan"}[st.cls];
+  return gabung([...kepala("P2H KRP",id,"No. P2H",drv?"Terima kasih telah mengisi P2H.\nBerikut ringkasan P2H anda :":"Ada P2H baru dari driver. Berikut detailnya :"),
+    lbl("Nama",nama()),drv?null:lbl("No. HP",S.hp.trim()),lbl("Unit",unit()),lbl("Shift",S.shift),
+    lbl("Tanggal P2H",tglSingkat(S.tgl)),lbl("Kilometer",S.km),
+    lbl("MCU",drv?"Fit":`Fit (tidur ${S.mcu.tidur} jam, tensi ${S.mcu.tensi})`),
+    lbl("Status",stTeks),"*Hasil* :",rekapP2H(),
+    daftar("Temuan",t.map(x=>(x.v==="T"&&x.kritis?"[KRITIS] ":"")+x.nama+" – "+(x.v==="T"?"tidak baik, ":"")+x.note)),
+    lbl("Catatan",S.catatan.trim()),"{FOTO}",GARIS,
+    drv?(st.cls==="bad"?"Unit tidak boleh dioperasikan. Silakan hubungi dispatcher.":"Utamakan keselamatan 🦺"):(st.cls==="bad"?"⛔ Unit *tidak boleh dioperasikan* sampai diperbaiki.":null)])}
+function msgLapor(id,isi,untuk){const d=S.dmg,drv=untuk==="driver";
+  return gabung([...kepala("Laporan Kerusakan KRP",id,"No. Laporan",drv?"Terima kasih telah melaporkan kerusakan.\nBerikut informasi laporan anda :":"Ada laporan kerusakan baru. Berikut detailnya :"),
+    lbl("Nama",nama()),drv?null:lbl("No. HP",S.hp.trim()),lbl("Unit",unit()),
+    lbl("Tanggal Laporan",tglSingkat(d.tgl)),lbl("Odometer",d.km||""),
+    ...isi.map(x=>lbl(x.k,x.ket.replace(/\n+/g,"; "))),
+    "{FOTO}",GARIS,
+    drv?"Dispatcher akan menindaklanjuti laporan anda. Utamakan keselamatan 🦺":"Mohon ditindaklanjuti."])}
+const tampilPesan=m=>String(m||"").replace("{FOTO}","*Foto* : (link Google Drive)");
+
+/* ===== Kirim ke Google Apps Script =====
+   Content-Type text/plain supaya tidak kena CORS preflight. */
+async function kirim(type,message,extra){
+  const body={type,message,driver:nama(),hp:hpDigits(S.hp),unit:unit(),shift:S.shift,waktu:new Date().toISOString(),...extra};
+  S.send={state:"sending"};if(S.view==="hasil")render();
+  if(!CONFIG.API_URL){await new Promise(r=>setTimeout(r,700));S.send={state:"ok",uji:true};if(S.view==="hasil")render();return}
+  try{
+    const r=await fetch(CONFIG.API_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)});
+    const j=await r.json();
+    if(!j.ok)throw new Error(j.error||"Server menolak data");
+    S.send={state:"ok",driverOk:j.driverOk};toast("Terkirim ke dispatcher");
+  }catch(e){S.send={state:"err",err:e.message||"Koneksi gagal",retry:()=>kirim(type,message,extra)}}
+  if(S.view==="hasil")render();
+}
+
+/* Perkecil foto: sisi terpanjang 1024px, JPEG kualitas 0.7 */
+function kompres(file){return new Promise((ok,no)=>{const img=new Image();img.onload=()=>{
+  const k=Math.min(1,1024/Math.max(img.width,img.height)),c=document.createElement("canvas");
+  c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+  ok(c.toDataURL("image/jpeg",0.7))};img.onerror=no;img.src=URL.createObjectURL(file)})}
+
+render();
+</script>
+</body>
+</html>
