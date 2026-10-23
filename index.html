@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
 <meta name="theme-color" content="#FFFFFF">
 <title>P2H KRP Driver</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,19 +27,10 @@
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
   padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light;
 }
-@media (prefers-color-scheme: dark){:root{
-  --bg:#0B1420; --surface:#121E2D; --sunk:#0F1926; --ink:#E6ECF3; --muted:#97A6B8; --line:#233247;
-  --brand:#3B8FD6; --brand-2:#5AA6E6; --brand-ink:#FFFFFF; --brand-soft:#132C47;
-  --head:#121E2D; --head-ink:#E6ECF3; --head-muted:#97A6B8;
-  --accent:#2F86D1; --accent-2:#4A9BE0; --accent-ink:#FFFFFF; --accent-soft:#132C47;
-  --red:#F04A50; --green:#86C64A;
-  --plate:#0F1926; --plate-ink:#7FBDF0;
-  --sel:#3B8FD6; --sel-ink:#FFFFFF;
-  --ok:#4CC26A; --ok-bg:#12301C; --warn:#F2B04D; --warn-bg:#33250F; --bad:#FF6B6B; --bad-bg:#3A1717;
-  --wa:#1F4D3A; --wa-ink:#E9EDEF; --wa-bg:#0E1A16; --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark}}
+
 
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--head)}
 img{max-width:100%}
 [hidden]{display:none!important}
@@ -63,7 +55,7 @@ main .wrap{padding-block:16px 28px;display:flex;flex-direction:column;gap:14px}
 
 /* Nomor lambung bergaya stiker pintu unit */
 .plate{display:inline-flex;align-items:center;font-family:var(--f-mono);font-weight:500;letter-spacing:.04em;background:var(--plate);color:var(--plate-ink);border:1.5px solid var(--plate-ink);border-radius:6px;padding:2px 8px;font-size:13px;line-height:1.2;white-space:nowrap}
-.plate.lg{font-size:18px;padding:4px 12px;border-radius:8px;background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.55)}
+.plate.lg{font-size:18px;padding:6px 12px;border-radius:8px;background:var(--brand);color:#fff;border-color:var(--brand)}
 
 /* Tipografi */
 h1,h2,h3{font-family:var(--f-display);font-weight:800;margin:0;text-wrap:balance;letter-spacing:-.01em}
@@ -97,15 +89,15 @@ textarea{min-height:84px;resize:vertical}
 .chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;letter-spacing:.02em;padding:4px 10px;border-radius:999px;white-space:nowrap}
 .chip.ok{background:var(--ok-bg);color:var(--ok)} .chip.warn{background:var(--warn-bg);color:var(--warn)} .chip.bad{background:var(--bad-bg);color:var(--bad)} .chip.na{background:var(--sunk);color:var(--muted);border:1px solid var(--line)}
 
-/* Hero beranda */
-.hero{position:relative;overflow:hidden;border-radius:16px;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;padding:18px 18px 22px;display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow)}
-.hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:5px;background:linear-gradient(90deg,var(--brand) 0 60%,var(--green) 60% 80%,var(--red) 80% 100%);filter:brightness(1.15)}
-.hero::before{content:"";position:absolute;right:-60px;top:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.14),rgba(255,255,255,0) 70%)}
-.hero .date{font-size:13px;color:rgba(255,255,255,.8)}
-.hero h1{font-size:24px;color:#fff}
-.hero-id{display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:relative;z-index:1}
-.hero-id .meta{font-size:13px;color:rgba(255,255,255,.85);line-height:1.4}
-.hero .edit{margin-left:auto;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:8px;padding:6px 12px;font-weight:600;font-size:13px;cursor:pointer}
+/* Hero beranda: kartu terang */
+.hero{position:relative;overflow:hidden;border-radius:16px;background:linear-gradient(135deg,#FFFFFF 40%,var(--brand-soft));border:1px solid var(--line);color:var(--ink);padding:18px 18px 22px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow)}
+.hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,var(--brand) 0 60%,var(--green) 60% 80%,var(--red) 80% 100%)}
+.hero .date{font-size:13px;color:var(--muted)}
+.hero h1{font-size:24px;color:var(--ink)}
+.hero-id{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;position:relative;z-index:1}
+.hero-id .meta{font-size:13px;color:var(--muted);line-height:1.45;min-width:0}
+.hero-id .meta b{display:block;color:var(--ink);font-size:14px}
+.hero .edit{background:var(--surface);border:1.5px solid var(--line);color:var(--brand);border-radius:8px;padding:7px 14px;font-weight:700;font-size:13px;cursor:pointer}
 
 /* Menu */
 .tiles{display:grid;gap:12px}
@@ -160,7 +152,7 @@ textarea{min-height:84px;resize:vertical}
 .q:last-child{border-bottom:0}
 .q p{min-width:0;font-weight:500}
 .pair{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap}
-.opt{border:1.5px solid var(--line);background:var(--surface);border-radius:12px;padding:9px 13px;font-weight:700;font-size:14px;cursor:pointer;min-width:58px;display:inline-flex;align-items:center;justify-content:center;gap:4px;transition:background .12s,border-color .12s}
+.opt{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 14px;min-height:44px;font-weight:700;font-size:14px;cursor:pointer;min-width:58px;display:inline-flex;align-items:center;justify-content:center;gap:4px;transition:background .12s,border-color .12s}
 .opt svg{width:16px;height:16px;stroke-width:2.4}
 .opt[aria-pressed=true].g{background:var(--ok);border-color:var(--ok);color:#fff}
 .opt[aria-pressed=true].r{background:var(--bad);border-color:var(--bad);color:#fff}
@@ -182,10 +174,10 @@ textarea{min-height:84px;resize:vertical}
 .item:last-child{border-bottom:0}
 .item.rusak{background:var(--bad-bg);box-shadow:inset 4px 0 0 var(--bad)}
 .item-top{display:flex;flex-direction:column;align-items:stretch;gap:8px}
-.item-name{min-width:0;font-weight:600}
+.item-name{min-width:0;font-weight:600;font-size:16px}
 .krit{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.06em;color:#fff;background:var(--red);border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:2px}
 .item .pair{display:grid;grid-template-columns:1fr 1.25fr 1fr;gap:6px;width:100%}
-.item .opt{min-width:0;padding:9px 6px}
+.item .opt{min-width:0;padding:10px 6px;min-height:46px;font-size:15px}
 .item.lain{background:var(--warn-bg);box-shadow:inset 4px 0 0 var(--warn)}
 .opt[aria-pressed=true].w{background:var(--warn);border-color:var(--warn);color:#fff}
 .lk-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
@@ -294,7 +286,7 @@ const IC={
 };
 
 /* ===== State ===== */
-const S={nama:"",hp:"",unitNo:"",shift:"Pagi",editId:false,view:"home",step:1,
+const S={revisiDari:null,nama:"",hp:"",unitNo:"",shift:"Pagi",editId:false,view:"home",step:1,
   mcu:null,m:{},ans:{},note:{},foto:{},fotoExtra:[],catatan:"",km:"",tgl:"",result:null,
   dmg:{ket:{},foto:{}},hasil:null,send:null,lastMsg:null,history:[],err:""};
 const KEY="p2h-krp-v2";
@@ -338,7 +330,7 @@ function vHome(){
   const hero=`<section class="hero">
     <div><p class="date">${new Date().toLocaleDateString("id-ID",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p>
     <h1>${salam}${ok?", "+esc(nama().split(/\s+/)[0]):""}</h1></div>
-    ${ok?`<div class="hero-id"><span class="plate lg">${esc(unit())}</span><span class="meta">${esc(nama())} · ${esc(S.hp.trim())}<br>Shift ${S.shift}</span><button class="edit" data-act="editId">Ubah</button></div>`
+    ${ok?`<div class="hero-id"><span class="plate lg">${esc(unit())}</span><span class="meta"><b>${esc(nama())}</b>${esc(S.hp.trim())} · Shift ${S.shift}</span><button class="edit" data-act="editId">Ubah</button></div>`
         :`<p class="date">Isi identitas dan unit sebelum berangkat.</p>`}
   </section>`;
   const form=ok?"":`<section class="card">
@@ -360,6 +352,7 @@ function vHome(){
       <span><h2>P2H Sebelum Jalan</h2><p>MCU harian, lalu cek kondisi unit</p>
         <span class="meta">${done?`<span class="chip ${done.cls}">Sudah diisi · ${esc(done.label)}</span>`:S.mcu?.fit?`<span class="chip ok">MCU fit · lanjut cek unit</span>`:`<span class="chip na">Belum diisi shift ini</span>`}</span></span>
       ${IC.chev}</button>
+    ${done?`<button class="link" data-act="revisi" style="justify-self:start;margin-top:-4px;font-size:14px;color:var(--brand)">Ada kesalahan? Kirim revisi P2H</button>`:""}
     <button class="tile lapor" data-act="startLapor" ${ok?"":"disabled"}>
       <span class="ic">${IC.warn}</span>
       <span><h2>Lapor Kerusakan</h2><p>Foto bukti dan keterangan kerusakan</p></span>
@@ -375,8 +368,11 @@ function vHome(){
 /* ----- P2H ----- */
 function steps(){return `<div class="steps">${["MCU","Cek unit","Catatan & kirim"].map((t,i)=>`<div data-n="${i+1}" class="${i+1===S.step?"on":i+1<S.step?"done":""}">${t}</div>`).join("")}</div>`}
 function vP2H(){
-  if(p2hToday()) return `<h1>P2H ${esc(unit())}</h1><div class="status ok"><strong>Sudah diisi</strong><p>P2H unit ini untuk shift ${S.shift} hari ini sudah terkirim. Satu unit cukup diisi sekali per shift.</p></div><button class="btn sec" data-act="home">Kembali ke beranda</button>`;
-  const head=`<div class="flowtitle"><h1>${["Cek kesehatan","Inspeksi harian","Catatan & kirim"][S.step-1]}</h1>${steps()}</div>`;
+  if(p2hToday()&&!S.revisiDari) return `<h1>P2H ${esc(unit())}</h1><div class="status ok"><strong>Sudah diisi</strong><p>P2H unit ini untuk shift ${S.shift} hari ini sudah terkirim (${esc(p2hToday().id)}).</p></div>
+    <section class="card"><h3>Ada yang salah isi?</h3><p class="small muted" style="margin:0">Isi ulang P2H. Dispatcher akan menerima pesan <b>REVISI</b> yang menggantikan kiriman sebelumnya.</p>
+    <button class="btn" data-act="revisi">Kirim revisi P2H</button></section>
+    <button class="btn sec" data-act="home">Kembali ke beranda</button>`;
+  const head=`<div class="flowtitle"><h1>${["Cek kesehatan","Inspeksi harian","Catatan & kirim"][S.step-1]}</h1>${S.revisiDari?`<div class="status warn" style="padding:10px 14px"><strong style="font-size:15px">Mode revisi</strong><p class="small" style="margin:0">Menggantikan ${esc(S.revisiDari)}</p></div>`:""}${steps()}</div>`;
   return head+[vMCU,vCek,vRingkas][S.step-1]();
 }
 function yn(key,q){const v=S.m[key];return `<div class="q"><p>${q}</p><div class="pair">
@@ -431,7 +427,11 @@ function vCek(){
       <label class="f"><span class="req">Hari dan tanggal</span><input type="date" id="tgl" data-model="tgl" value="${esc(S.tgl)}"></label>
     </div>
   </section>
-  <p class="small muted">Tekan <b>Semua baik</b> per bagian, lalu ubah item yang bermasalah jadi <b>Tidak Baik</b> (wajib foto) atau <b>Lainnya</b> (tulis kondisinya).</p>
+  <section class="card" style="gap:10px">
+    <h3>Cara cepat</h3>
+    <p class="small muted" style="margin:0">1. Tekan <b>Tandai semua Baik</b>. 2. Ubah item yang bermasalah jadi <b>Tidak Baik</b> (wajib foto) atau <b>Lainnya</b>. 3. Tekan <b>Lanjut</b>.</p>
+    <button class="btn sec" data-act="allOkAll">${IC.check} Tandai semua Baik</button>
+  </section>
   ${cats}
   <div class="bar"><div class="barinfo"><span>${filled}/${FLAT.length} item dicek</span><span>${FLAT.filter((_,k)=>S.ans[k]==="T").length} tidak baik · ${FLAT.filter((_,k)=>S.ans[k]==="L").length} lainnya</span></div>
     <div class="prog"><i style="width:${filled/FLAT.length*100}%"></i></div>
@@ -457,7 +457,7 @@ function vRingkas(){
     <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:13px;color:var(--muted)">Foto (opsional, maksimal ${MAX_FOTO.extra})
       ${photoGrid("extra",S.fotoExtra,MAX_FOTO.extra,"tambahan")}</div>
   </section>
-  <div class="bar"><button class="btn" data-act="sendP2H">${IC.send} Kirim ke dispatcher</button></div>`;
+  <div class="bar"><p class="small muted" style="margin:0;text-align:center">Periksa lagi sebelum kirim. Kalau ada yang salah setelah terkirim, kirim revisi dari Beranda.</p><button class="btn" data-act="sendP2H">${IC.send} Kirim ke dispatcher</button></div>`;
 }
 
 /* ----- Lapor kerusakan ----- */
@@ -501,7 +501,7 @@ const ACT={
   saveId:()=>{if(!nama()||!unit()){S.err="Nama driver, No. HP, dan nomor lambung wajib diisi.";rerender();return}
     if(!hpOk(S.hp)){S.err="No. HP tidak valid. Contoh: 081234567890.";rerender();return}
     S.err="";S.unitNo=unit();S.editId=false;S.mcu=null;resetP2H();save();render();toast("Identitas disimpan")},
-  startP2H:()=>{resetP2H(false);S.tgl=todayISO();S.step=S.mcu?.fit?2:1;go("p2h")},
+  startP2H:()=>{S.revisiDari=null;resetP2H(false);S.tgl=todayISO();S.step=S.mcu?.fit?2:1;go("p2h")},
   startLapor:()=>{S.dmg={ket:{},foto:{},km:S.km||"",tgl:todayISO()};go("lapor")},
   m:el=>{S.m[el.dataset.k]=el.dataset.v;S.err="";rerender()},
   cekMCU:()=>{const m=S.m;
@@ -525,6 +525,8 @@ const ACT={
   },
   ulangMCU:()=>{S.mcu=null;S.m={};S.step=1;go("p2h")},
   ans:el=>{S.ans[+el.dataset.i]=el.dataset.v;S.err="";rerender()},
+  revisi:()=>{const p=p2hToday();if(!p)return;S.revisiDari=p.id;resetP2H(false);S.tgl=todayISO();S.step=S.mcu?.fit?2:1;go("p2h")},
+  allOkAll:()=>{FLAT.forEach((f,i)=>{if(!S.ans[i])S.ans[i]="B"});S.err="";rerender();toast("Semua item ditandai Baik. Ubah yang bermasalah.")},
   allOk:el=>{const ci=+el.dataset.c;FLAT.forEach((f,i)=>{if(f.ci===ci&&!S.ans[i])S.ans[i]="B"});rerender()},
   step:el=>{S.step=+el.dataset.v;render();scrollTo(0,0)},
   toRingkas:()=>{
@@ -547,11 +549,13 @@ const ACT={
       sub:st.cls==="bad"?"Unit tidak boleh dioperasikan sampai diperbaiki.":st.cls==="warn"?"Boleh jalan. Temuan sudah diteruskan ke dispatcher.":"Selamat jalan, utamakan keselamatan.",
       list:t.map(temuanTeks),
       actions:[{act:"home",label:"Kembali ke beranda",cls:"sec"}]};
-    addHistory({id,type:"p2h",judul:"P2H "+unit(),cls:st.cls,label:st.short,shift:S.shift});
+    const rev=S.revisiDari;
+    addHistory({id,type:"p2h",judul:(rev?"Revisi P2H ":"P2H ")+unit(),cls:st.cls,label:st.short,shift:S.shift});
     go("hasil");
-    kirim("p2h",S.lastMsg,{id,ringkas:msgP2H(id,st,t,"driver"),data:{tanggal:S.tgl,km:S.km,status:st.label,mcu:{tidur:S.mcu.tidur,tensi:S.mcu.tensi},catatan:S.catatan.trim(),
+    kirim("p2h",S.lastMsg,{id,ringkas:msgP2H(id,st,t,"driver"),data:{tanggal:S.tgl,km:S.km,status:(rev?"REVISI – ":"")+st.label,mcu:{tidur:S.mcu.tidur,tensi:S.mcu.tensi},catatan:(rev?`[Revisi dari ${rev}] `:"")+S.catatan.trim(),
       temuan:t.map(x=>({item:x.nama,kategori:x.cat,kritis:x.kritis,nilai:JAWAB[x.v],ket:x.note})),
       checklist:FLAT.map((f,i)=>[f.nama,S.ans[i]==="B"?"Baik":S.ans[i]==="T"?"Tidak Baik: "+(S.note[i]||"").trim():(S.note[i]||"").trim()])},photos});
+    S.revisiDari=null;
   },
   sendLapor:()=>{const d=S.dmg;
     const isi=LK.map(([k])=>({k,ket:(d.ket[k]||"").trim(),foto:d.foto[k]||[]})).filter(x=>x.ket||x.foto.length);
@@ -611,7 +615,11 @@ function rekapP2H(){return P2H.map((c,ci)=>{const idx=FLAT.map((f,i)=>f.ci===ci?
   return `${b===idx.length?"✅":"⚠️"} ${c.cat}: ${b}/${idx.length} baik`}).join("\n")}
 function msgP2H(id,st,t,untuk){const drv=untuk==="driver";
   const stTeks={ok:"✅ Layak jalan",warn:"⚠️ Layak jalan dengan catatan",bad:"⛔ Tidak layak jalan"}[st.cls];
-  return gabung([...kepala("P2H KRP",id,"No. P2H",drv?"Terima kasih telah mengisi P2H.\nBerikut ringkasan P2H anda :":"Ada P2H baru dari driver. Berikut detailnya :"),
+  const rev=S.revisiDari;
+  return gabung([...kepala(rev?"P2H KRP (REVISI)":"P2H KRP",id,"No. P2H",
+      rev?(drv?"Revisi P2H anda sudah diterima.\nBerikut ringkasan terbarunya :":"Ada *revisi* P2H dari driver. Data ini menggantikan P2H sebelumnya :")
+         :(drv?"Terima kasih telah mengisi P2H.\nBerikut ringkasan P2H anda :":"Ada P2H baru dari driver. Berikut detailnya :")),
+    lbl("Revisi dari",rev||""),
     lbl("Nama",nama()),drv?null:lbl("No. HP",S.hp.trim()),lbl("Unit",unit()),lbl("Shift",S.shift),
     lbl("Tanggal P2H",tglSingkat(S.tgl)),lbl("Kilometer",S.km),
     lbl("MCU",drv?"Fit":`Fit (tidur ${S.mcu.tidur} jam, tensi ${S.mcu.tensi})`),
