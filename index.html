@@ -72,6 +72,8 @@ label.f{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:13p
 input[type=text],input[type=number],input[type=tel],input[type=date],select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--sunk);border:1.5px solid var(--line);border-radius:12px;padding:12px 13px;width:100%;min-width:0;transition:border-color .15s}
 input:focus,textarea:focus{border-color:var(--accent);outline:none}
 textarea{min-height:84px;resize:vertical}
+select{appearance:none;-webkit-appearance:none;padding-right:40px;cursor:pointer;font-weight:600;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2300539B' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+select:invalid,select option[disabled]{color:var(--muted)}
 :focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .err{color:var(--bad);font-size:13px;font-weight:600}
@@ -262,6 +264,8 @@ const P2H=[
 ];
 /* Kategori sesuai form "Pelaporan Kendaraan Perusahaan" */
 const LK=[["Bodi","Penyok, baret, kaca, spion, plat"],["Air","Radiator, air wiper, kebocoran air"],["Listrik","Lampu, aki, klakson, AC, GPS/Gtrack"],["Oli","Oli mesin, power steering, minyak rem, rembesan"],["Karet & Kertas","Ban, wiper, tali kipas, filter"],["Lain - lain","Kerusakan lain di luar kategori di atas"]];
+/* Daftar driver KRP (dari Data TAD Services Sangatta). Tambah/hapus nama di sini. */
+const DRIVERS=["AGUS WAHYUDI", "ALIMIN", "AMIRUDDIN", "ARIF SANTOSO", "ASKAR", "CATUR DWI CAHYONO", "DANDI", "DIAN HERMAWAN", "FERIANTO PRIYO BIJAKSONO", "IMRON", "IRWAN PRATAMA PUTRA", "ISHAK MUHAMMAD GAZALI", "M. REDHO WIRAYUDA", "MUHAMMAD HUSAYNI", "NAWIR ALI", "PATHULLAH MS", "REO DWI MARINES", "RUSTAM EFENDI", "SUKAJI", "SUPARMAN", "SURYA CHANDRA KIRANA", "SUWARDI", "SUWARSONO", "SYAMSAIL", "SYARIFUDDIN-A", "SYARIFUDDIN-B", "TAUFIK HIDAYAT", "WAHYU"];
 const SHIFT=["Pagi","Malam","Pool"];
 const TIPS=["Pakai sabuk pengaman setiap saat, termasuk penumpang.","Patuhi batas kecepatan dan rambu di area kerja.","Jaga jarak aman dengan unit di depan, terutama di jalan tambang.","Jangan gunakan HP saat mengemudi.","Mengantuk? Berhenti di tempat aman dan istirahat.","Pastikan area belakang aman sebelum mundur.","Nyalakan lampu dan rotary lamp saat unit beroperasi."];
 const MAX_FOTO={item:3,extra:5,lk:5};
@@ -284,7 +288,7 @@ const IC={
 };
 
 /* ===== State ===== */
-const S={revisiDari:null,nama:"",hp:"",unitNo:"",shift:"Pagi",editId:false,view:"home",step:1,
+const S={revisiDari:null,namaLain:false,nama:"",hp:"",unitNo:"",shift:"Pagi",editId:false,view:"home",step:1,
   mcu:null,m:{},ans:{},note:{},foto:{},fotoExtra:[],catatan:"",km:"",tgl:"",result:null,
   dmg:{ket:{},foto:{}},hasil:null,send:null,lastMsg:null,history:[],err:""};
 const KEY="p2h-krp-v2";
@@ -331,9 +335,16 @@ function vHome(){
     ${ok?`<div class="hero-id"><span class="plate lg">${esc(unit())}</span><span class="meta"><b>${esc(nama())}</b>${esc(S.hp.trim())} · Shift ${S.shift}</span><button class="edit" data-act="editId">Ubah</button></div>`
         :`<p class="date">Isi identitas dan unit sebelum berangkat.</p>`}
   </section>`;
+  const lain=S.namaLain||(!!S.nama.trim()&&!DRIVERS.includes(S.nama.trim().toUpperCase()));
   const form=ok?"":`<section class="card">
       <h3>Identitas & unit</h3>
-      <label class="f"><span class="req">Nama driver</span><input type="text" id="nama" data-model="nama" autocomplete="name" placeholder="Nama lengkap" value="${esc(S.nama)}"></label>
+      <label class="f"><span class="req">Nama driver</span>
+        <select id="namaSel" aria-label="Nama driver">
+          <option value="" ${!S.nama&&!lain?"selected":""} disabled>Pilih nama…</option>
+          ${DRIVERS.map(n=>`<option value="${esc(n)}" ${!lain&&n===S.nama?"selected":""}>${esc(n)}</option>`).join("")}
+          <option value="__lain" ${lain?"selected":""}>Isi nama</option>
+        </select></label>
+      ${lain?`<label class="f"><span class="req">Ketik nama lengkap</span><input type="text" id="nama" data-model="nama" autocomplete="name" placeholder="Nama lengkap" value="${esc(S.nama)}"></label>`:""}
       <label class="f"><span class="req">No. HP (WhatsApp)</span><input type="tel" id="hp" data-model="hp" autocomplete="tel" inputmode="tel" placeholder="mis. 0812xxxxxxx" value="${esc(S.hp)}"><span class="small" style="font-weight:400">Ringkasan setiap kiriman dikirim ke nomor ini.</span></label>
       <label class="f"><span class="req">Nomor lambung</span><input type="text" id="unitNo" data-model="unitNo" autocapitalize="characters" placeholder="mis. LV-023" value="${esc(S.unitNo)}"></label>
       <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:13px;color:var(--muted)">Shift
@@ -495,9 +506,9 @@ const ACT={
   home:()=>go("home"),
   editId:()=>{S.editId=true;render()},
   shift:el=>{S.shift=el.dataset.v;rerender()},
-  saveId:()=>{if(!nama()||!unit()){S.err="Nama driver, No. HP, dan nomor lambung wajib diisi.";rerender();return}
+  saveId:()=>{if(!nama()||!unit()){S.err="Pilih nama driver, lalu isi No. HP dan nomor lambung.";rerender();return}
     if(!hpOk(S.hp)){S.err="No. HP tidak valid. Contoh: 081234567890.";rerender();return}
-    S.err="";S.unitNo=unit();S.editId=false;S.mcu=null;resetP2H();save();render();toast("Identitas disimpan")},
+    S.err="";S.unitNo=unit();if(DRIVERS.includes(nama().toUpperCase()))S.nama=nama().toUpperCase();S.namaLain=false;S.editId=false;S.mcu=null;resetP2H();save();render();toast("Identitas disimpan")},
   startP2H:()=>{S.revisiDari=null;resetP2H(false);S.tgl=todayISO();S.step=S.mcu?.fit?2:1;go("p2h")},
   startLapor:()=>{S.dmg={ket:{},foto:{},km:S.km||"",tgl:todayISO()};go("lapor")},
   m:el=>{S.m[el.dataset.k]=el.dataset.v;S.err="";rerender()},
@@ -587,7 +598,9 @@ const app=$("#app"),hdr=$("#hdr");
 app.addEventListener("input",e=>{const el=e.target;
   if(el.dataset.model)setPath(el.dataset.model,el.value);
   if(el.dataset.check)setPath(el.dataset.check,el.checked)});
-app.addEventListener("change",async e=>{const el=e.target;if(!el.dataset.foto)return;
+app.addEventListener("change",async e=>{const el=e.target;
+  if(el.id==="namaSel"){if(el.value==="__lain"){S.namaLain=true;S.nama=""}else{S.namaLain=false;S.nama=el.value}S.err="";rerender();if(S.namaLain)$("#nama")?.focus();return}
+  if(!el.dataset.foto)return;
   const t=el.dataset.foto,arr=fotoArr(t),files=[...el.files].slice(0,maxFoto(t)-arr.length);
   for(const f of files){try{arr.push({url:URL.createObjectURL(f),t:new Date(),data:await kompres(f)})}catch(_){toast("Foto tidak bisa dibaca, coba ambil ulang")}}
   S.err="";rerender()});
