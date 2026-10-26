@@ -252,8 +252,6 @@ details summary{cursor:pointer;font-weight:600;color:var(--muted);font-size:14px
    Kosongkan untuk mode uji (tidak ada yang dikirim). */
 const CONFIG={API_URL:"https://script.google.com/macros/s/AKfycbxsFKi0NsN_hvyS5dLyfKwBl9nm3OVuejQOfnL7e8OwArQ8-Dbyk-biEcxU8iFXu7iK/exec"};
 
-/* Batas MCU, sesuaikan dengan aturan K3 perusahaan */
-const MCU_RULE={tidurMin:6,sisMin:90,sisMax:140,diaMin:60,diaMax:90};
 /* Checklist P2H sesuai form "Inspeksi Harian Kendaraan".
    [nama item, kritis?, kategori laporan kerusakan]
    Item kritis yang "Tidak Baik" = unit tidak layak jalan. */
@@ -388,7 +386,6 @@ function vMCU(){const m=S.m;
     <div>${yn("obat","Minum obat yang bikin mengantuk?")}${yn("alkohol","Minum alkohol dalam 24 jam terakhir?")}${yn("keluhan","Ada keluhan sakit (pusing, demam, mual)?")}</div>
     ${m.keluhan==="ya"?`<label class="f">Jelaskan keluhan<input type="text" id="ket" data-model="m.ket" value="${esc(m.ket??"")}"></label>`:""}
     <label class="stmt"><input type="checkbox" id="siap" data-check="m.siap" ${m.siap?"checked":""}><span>Saya menyatakan dalam kondisi sehat dan siap bekerja.</span></label>
-    <p class="small muted">Batas aman: tidur minimal ${MCU_RULE.tidurMin} jam, tensi ${MCU_RULE.sisMin}–${MCU_RULE.sisMax} / ${MCU_RULE.diaMin}–${MCU_RULE.diaMax}.</p>
   </section>
   <div class="bar">${S.err?`<p class="err">${esc(S.err)}</p>`:""}<button class="btn" data-act="cekMCU">Cek kelayakan</button></div>`;
 }
@@ -508,8 +505,6 @@ const ACT={
     if(m.tidur==null||m.tidur===""||!m.sis||!m.dia||!m.obat||!m.alkohol||!m.keluhan){S.err="Lengkapi jam tidur, tensi, dan semua pertanyaan.";rerender();return}
     if(!m.siap){S.err="Centang pernyataan siap bekerja untuk melanjutkan.";rerender();return}
     const a=[],t=+m.tidur,s=+m.sis,d=+m.dia;
-    if(t<MCU_RULE.tidurMin)a.push(`Tidur ${t} jam (minimal ${MCU_RULE.tidurMin} jam)`);
-    if(s<MCU_RULE.sisMin||s>MCU_RULE.sisMax||d<MCU_RULE.diaMin||d>MCU_RULE.diaMax)a.push(`Tensi ${s}/${d} di luar batas aman`);
     if(m.obat==="ya")a.push("Minum obat yang menyebabkan kantuk");
     if(m.alkohol==="ya")a.push("Minum alkohol dalam 24 jam terakhir");
     if(m.keluhan==="ya")a.push("Keluhan sakit"+(m.ket?": "+m.ket:""));
