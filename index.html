@@ -288,15 +288,19 @@ const IC={
 };
 
 /* ===== State ===== */
-const S={revisiDari:null,namaLain:false,nama:"",hp:"",unitNo:"",shift:"Pagi",editId:false,view:"home",step:1,
+const S={revisiDari:null,namaLain:false,nama:"",hp:"",unitNo:"",shift:"Pagi",profiles:{},view:"home",step:1,
   mcu:null,m:{},ans:{},note:{},foto:{},fotoExtra:[],catatan:"",km:"",tgl:"",result:null,
   dmg:{ket:{},foto:{}},hasil:null,send:null,lastMsg:null,history:[],err:""};
 const KEY="p2h-krp-v2";
 const hpDigits=v=>String(v||"").replace(/\D/g,"");
 const hpOk=v=>{const d=hpDigits(v);return /^(0|62)8\d{7,12}$/.test(d)};
-try{const v=JSON.parse(localStorage.getItem(KEY)||"{}");Object.assign(S,{nama:v.nama||"",hp:v.hp||"",unitNo:v.unitNo||"",shift:v.shift||"Pagi",history:(v.history||[]).map(h=>({...h,time:new Date(h.time)}))})}catch(_){}
-S.editId=!(S.nama.trim()&&S.unitNo.trim()&&hpOk(S.hp));
-function save(){try{localStorage.setItem(KEY,JSON.stringify({nama:S.nama,hp:S.hp,unitNo:S.unitNo,shift:S.shift,history:S.history.slice(0,30)}))}catch(_){}}
+/* Satu HP bisa dipakai banyak driver. Yang diingat: riwayat kiriman + data terakhir per nama (No. HP, unit, shift) untuk isi otomatis. */
+try{const v=JSON.parse(localStorage.getItem(KEY)||"{}");S.history=(v.history||[]).map(h=>({...h,time:new Date(h.time)})).filter(h=>Date.now()-h.time<7*864e5);S.profiles=v.profiles||{};
+  if(v.nama&&!S.profiles[String(v.nama).toUpperCase()])S.profiles[String(v.nama).toUpperCase()]={hp:v.hp||"",unitNo:v.unitNo||"",shift:v.shift||"Pagi"}}catch(_){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({profiles:S.profiles,history:S.history.slice(0,200)}))}catch(_){}}
+function ingatProfil(){const k=nama().toUpperCase();if(k){S.profiles[k]={hp:S.hp.trim(),unitNo:unit(),shift:S.shift};save()}}
+function resetId(){S.nama="";S.namaLain=false;S.hp="";S.unitNo="";S.shift="Pagi"}
+function pakaiProfil(n){const pr=S.profiles[String(n||"").toUpperCase()];if(pr){S.hp=pr.hp||"";S.unitNo=pr.unitNo||"";S.shift=pr.shift||"Pagi"}}
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -305,7 +309,9 @@ const hhmm=d=>d.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});
 const nama=()=>S.nama.trim(), unit=()=>S.unitNo.trim().toUpperCase();
 const lengkap=()=>nama()&&unit()&&hpOk(S.hp);
 const sameDay=d=>d.toDateString()===new Date().toDateString();
-const p2hToday=()=>S.history.find(h=>h.type==="p2h"&&h.unit===unit()&&h.shift===S.shift&&sameDay(h.time));
+const p2hToday=()=>unit()?S.history.find(h=>h.type==="p2h"&&h.unit===unit()&&h.shift===S.shift&&sameDay(h.time)):null;
+const sudahP2H=n=>S.history.some(h=>h.type==="p2h"&&sameDay(h.time)&&String(h.nama||"").toUpperCase()===n);
+function cekId(){if(!nama())return "Pilih nama driver.";if(!hpOk(S.hp))return "No. HP tidak valid. Contoh: 081234567890.";if(!unit())return "Isi nomor lambung.";return ""}
 function toast(t){const e=document.createElement("div");e.className="toast";e.setAttribute("role","status");e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),2400)}
 function go(v){S.view=v;S.err="";render();scrollTo(0,0)}
 function rerender(){const y=scrollY;render();scrollTo(0,y)}
@@ -323,53 +329,56 @@ function render(){
   $("#app").innerHTML=`<div class="view" style="display:flex;flex-direction:column;gap:14px">${({home:vHome,p2h:vP2H,lapor:vLapor,hasil:vHasil})[S.view]()}</div>`;
 }
 
+/* ----- Kartu identitas (diisi setiap kali, otomatis dari data terakhir per nama) ----- */
+function dupHtml(){const dup=S.view==="p2h"?p2hToday():null;
+  return dup?`<div class="status warn" style="padding:10px 14px"><strong style="font-size:15px">${esc(unit())} sudah P2H shift ${S.shift} hari ini (${hhmm(dup.time)})</strong><p class="small" style="margin:0">Kiriman ini akan dicatat sebagai <b>revisi</b> dari ${esc(dup.id)}.</p></div>`:""}
+function idCard(){
+  const lain=S.namaLain||(!!nama()&&!DRIVERS.includes(nama().toUpperCase()));
+  return `<section class="card">
+      <h3>Identitas driver & unit</h3>
+      <label class="f"><span class="req">Nama driver</span>
+        <select id="namaSel" aria-label="Nama driver">
+          <option value="" ${!nama()&&!lain?"selected":""} disabled>Pilih nama…</option>
+          ${DRIVERS.map(n=>`<option value="${esc(n)}" ${!lain&&n===nama()?"selected":""}>${esc(n)}${S.view==="p2h"&&sudahP2H(n)?" ✓":""}</option>`).join("")}
+          <option value="__lain" ${lain?"selected":""}>Isi nama</option>
+        </select></label>
+      ${lain?`<label class="f"><span class="req">Ketik nama lengkap</span><input type="text" id="nama" data-model="nama" autocomplete="off" placeholder="Nama lengkap" value="${esc(S.nama)}"></label>`:""}
+      ${S.view==="p2h"?`<p class="small muted" style="margin:-4px 0 0">Tanda ✓ = sudah P2H hari ini dari HP ini.</p>`:""}
+      <label class="f"><span class="req">No. HP (WhatsApp) driver</span><input type="tel" id="hp" data-model="hp" autocomplete="off" inputmode="tel" placeholder="mis. 0812xxxxxxx" value="${esc(S.hp)}"><span class="small" style="font-weight:400">Ringkasan dikirim ke nomor ini.</span></label>
+      <div class="row2">
+        <label class="f"><span class="req">Nomor lambung</span><input type="text" id="unitNo" data-model="unitNo" autocapitalize="characters" placeholder="mis. LV-023" value="${esc(S.unitNo)}"></label>
+        <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:13px;color:var(--muted)">Shift
+          <select id="shiftSel" aria-label="Shift">${SHIFT.map(x=>`<option ${S.shift===x?"selected":""}>${x}</option>`).join("")}</select></div>
+      </div>
+      <div id="dupBox">${dupHtml()}</div>
+    </section>`}
+
 /* ----- Beranda ----- */
 function vHome(){
   const jam=new Date().getHours();
   const salam=jam<11?"Selamat pagi":jam<15?"Selamat siang":jam<18?"Selamat sore":"Selamat malam";
-  const done=p2hToday(), ok=lengkap()&&!S.editId;
   const tip=TIPS[Math.floor(Date.now()/864e5)%TIPS.length];
-  const hero=`<section class="hero">
+  const today=S.history.filter(h=>sameDay(h.time)),nP2H=today.filter(h=>h.type==="p2h").length;
+  return `<section class="hero">
     <div><p class="date">${new Date().toLocaleDateString("id-ID",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p>
-    <h1>${salam}${ok?", "+esc(nama().split(/\s+/)[0]):""}</h1></div>
-    ${ok?`<div class="hero-id"><span class="plate lg">${esc(unit())}</span><span class="meta"><b>${esc(nama())}</b>${esc(S.hp.trim())} · Shift ${S.shift}</span><button class="edit" data-act="editId">Ubah</button></div>`
-        :`<p class="date">Isi identitas dan unit sebelum berangkat.</p>`}
-  </section>`;
-  const lain=S.namaLain||(!!S.nama.trim()&&!DRIVERS.includes(S.nama.trim().toUpperCase()));
-  const form=ok?"":`<section class="card">
-      <h3>Identitas & unit</h3>
-      <label class="f"><span class="req">Nama driver</span>
-        <select id="namaSel" aria-label="Nama driver">
-          <option value="" ${!S.nama&&!lain?"selected":""} disabled>Pilih nama…</option>
-          ${DRIVERS.map(n=>`<option value="${esc(n)}" ${!lain&&n===S.nama?"selected":""}>${esc(n)}</option>`).join("")}
-          <option value="__lain" ${lain?"selected":""}>Isi nama</option>
-        </select></label>
-      ${lain?`<label class="f"><span class="req">Ketik nama lengkap</span><input type="text" id="nama" data-model="nama" autocomplete="name" placeholder="Nama lengkap" value="${esc(S.nama)}"></label>`:""}
-      <label class="f"><span class="req">No. HP (WhatsApp)</span><input type="tel" id="hp" data-model="hp" autocomplete="tel" inputmode="tel" placeholder="mis. 0812xxxxxxx" value="${esc(S.hp)}"><span class="small" style="font-weight:400">Ringkasan setiap kiriman dikirim ke nomor ini.</span></label>
-      <label class="f"><span class="req">Nomor lambung</span><input type="text" id="unitNo" data-model="unitNo" autocapitalize="characters" placeholder="mis. LV-023" value="${esc(S.unitNo)}"></label>
-      <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:13px;color:var(--muted)">Shift
-        <div class="seg3">${SHIFT.map(x=>`<button class="opt a" data-act="shift" data-v="${x}" ${pressed(S.shift===x)}>${x}</button>`).join("")}</div></div>
-      ${S.err?`<p class="err">${esc(S.err)}</p>`:""}
-      <button class="btn" data-act="saveId">Simpan</button>
-    </section>`;
-  const today=S.history.filter(h=>sameDay(h.time));
-  return `${hero}${form}
+    <h1>${salam}</h1></div>
+    <p class="date">Satu HP bisa dipakai untuk beberapa driver. Nama dan unit dipilih setiap kali mengisi.</p>
+  </section>
   <h3 style="margin-top:4px">Mau isi apa?</h3>
   <div class="tiles">
-    <button class="tile p2h" data-act="startP2H" ${ok?"":"disabled"}>
+    <button class="tile p2h" data-act="startP2H">
       <span class="ic">${IC.clip}</span>
       <span><h2>P2H Sebelum Jalan</h2><p>MCU harian, lalu cek kondisi unit</p>
-        <span class="meta">${done?`<span class="chip ${done.cls}">Sudah diisi · ${esc(done.label)}</span>`:S.mcu?.fit?`<span class="chip ok">MCU fit · lanjut cek unit</span>`:`<span class="chip na">Belum diisi shift ini</span>`}</span></span>
+        <span class="meta">${nP2H?`<span class="chip ok">${nP2H} P2H terkirim dari HP ini hari ini</span>`:`<span class="chip na">Belum ada P2H hari ini</span>`}</span></span>
       ${IC.chev}</button>
-    ${done?`<button class="link" data-act="revisi" style="justify-self:start;margin-top:-4px;font-size:14px;color:var(--brand)">Ada kesalahan? Kirim revisi P2H</button>`:""}
-    <button class="tile lapor" data-act="startLapor" ${ok?"":"disabled"}>
+    <button class="tile lapor" data-act="startLapor">
       <span class="ic">${IC.warn}</span>
       <span><h2>Lapor Kerusakan</h2><p>Foto bukti dan keterangan kerusakan</p></span>
       ${IC.chev}</button>
   </div>
   <div class="tip"><span class="ic">${IC.shield}</span><div><b>Pesan keselamatan</b><p>${esc(tip)}</p></div></div>
-  <section class="card"><h3>Kiriman hari ini</h3>
-    ${today.length?`<div class="feed">${today.map(h=>`<div class="feed-i"><span class="dot ${h.cls}"></span><div class="t"><b>${esc(h.judul)}</b><span>${esc(h.unit)} · ${hhmm(h.time)} · ${esc(h.label)}</span></div></div>`).join("")}</div>`
+  <section class="card"><h3>Kiriman hari ini dari HP ini</h3>
+    ${today.length?`<div class="feed">${today.map(h=>`<div class="feed-i"><span class="dot ${h.cls}"></span><div class="t"><b>${esc(h.nama||"-")} · ${esc(h.judul)}</b><span>${esc(h.unit)} · ${hhmm(h.time)} · ${esc(h.label)}</span></div></div>`).join("")}</div>`
       :`<p class="empty">Belum ada kiriman dari HP ini hari ini.</p>`}
   </section>`;
 }
@@ -377,18 +386,16 @@ function vHome(){
 /* ----- P2H ----- */
 function steps(){return `<div class="steps">${["MCU","Cek unit","Catatan & kirim"].map((t,i)=>`<div data-n="${i+1}" class="${i+1===S.step?"on":i+1<S.step?"done":""}">${t}</div>`).join("")}</div>`}
 function vP2H(){
-  if(p2hToday()&&!S.revisiDari) return `<h1>P2H ${esc(unit())}</h1><div class="status ok"><strong>Sudah diisi</strong><p>P2H unit ini untuk shift ${S.shift} hari ini sudah terkirim (${esc(p2hToday().id)}).</p></div>
-    <section class="card"><h3>Ada yang salah isi?</h3><p class="small muted" style="margin:0">Isi ulang P2H. Dispatcher akan menerima pesan <b>REVISI</b> yang menggantikan kiriman sebelumnya.</p>
-    <button class="btn" data-act="revisi">Kirim revisi P2H</button></section>
-    <button class="btn sec" data-act="home">Kembali ke beranda</button>`;
-  const head=`<div class="flowtitle"><h1>${["Cek kesehatan","Inspeksi harian","Catatan & kirim"][S.step-1]}</h1>${S.revisiDari?`<div class="status warn" style="padding:10px 14px"><strong style="font-size:15px">Mode revisi</strong><p class="small" style="margin:0">Menggantikan ${esc(S.revisiDari)}</p></div>`:""}${steps()}</div>`;
+  const rev=S.step>1?p2hToday():null;
+  const head=`<div class="flowtitle"><h1>${["Cek kesehatan","Inspeksi harian","Catatan & kirim"][S.step-1]}</h1>${S.step>1?`<p class="muted" style="margin:0">${esc(nama())} · ${esc(unit())} · Shift ${S.shift}</p>`:""}${rev?`<div class="status warn" style="padding:10px 14px"><strong style="font-size:15px">Mode revisi</strong><p class="small" style="margin:0">Menggantikan ${esc(rev.id)}</p></div>`:""}${steps()}</div>`;
   return head+[vMCU,vCek,vRingkas][S.step-1]();
 }
 function yn(key,q){const v=S.m[key];return `<div class="q"><p>${q}</p><div class="pair">
   <button class="opt g" data-act="m" data-k="${key}" data-v="tidak" ${pressed(v==="tidak")}>Tidak</button>
   <button class="opt r" data-act="m" data-k="${key}" data-v="ya" ${pressed(v==="ya")}>Ya</button></div></div>`}
 function vMCU(){const m=S.m;
-  return `<p class="muted">Wajib diisi sebelum mengemudi. Jawab dengan jujur, ini untuk keselamatanmu.</p>
+  return `${idCard()}
+  <p class="muted">Wajib diisi sebelum mengemudi. Jawab dengan jujur, ini untuk keselamatanmu.</p>
   <section class="card">
     <div class="row2">
       <label class="f"><span class="req">Jam tidur (24 jam terakhir)</span><input type="number" id="tidur" data-model="m.tidur" inputmode="decimal" min="0" max="24" step="0.5" placeholder="mis. 7" value="${esc(m.tidur??"")}"></label>
@@ -396,7 +403,7 @@ function vMCU(){const m=S.m;
     </div>
     <div>${yn("obat","Minum obat yang bikin mengantuk?")}${yn("alkohol","Minum alkohol dalam 24 jam terakhir?")}${yn("keluhan","Ada keluhan sakit (pusing, demam, mual)?")}</div>
     ${m.keluhan==="ya"?`<label class="f">Jelaskan keluhan<input type="text" id="ket" data-model="m.ket" value="${esc(m.ket??"")}"></label>`:""}
-    <label class="stmt"><input type="checkbox" id="siap" data-check="m.siap" ${m.siap?"checked":""}><span>Saya menyatakan dalam kondisi sehat dan siap bekerja.</span></label>
+    <label class="stmt"><input type="checkbox" id="siap" data-check="m.siap" ${m.siap?"checked":""}><span>Menyatakan dalam kondisi sehat dan siap bekerja.</span></label>
   </section>
   <div class="bar">${S.err?`<p class="err">${esc(S.err)}</p>`:""}<button class="btn" data-act="cekMCU">Cek kelayakan</button></div>`;
 }
@@ -465,7 +472,7 @@ function vRingkas(){
     <div class="f" style="display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:13px;color:var(--muted)">Foto (opsional, maksimal ${MAX_FOTO.extra})
       ${photoGrid("extra",S.fotoExtra,MAX_FOTO.extra,"tambahan")}</div>
   </section>
-  <div class="bar"><p class="small muted" style="margin:0;text-align:center">Periksa lagi sebelum kirim. Kalau ada yang salah setelah terkirim, kirim revisi dari Beranda.</p><button class="btn" data-act="sendP2H">${IC.send} Kirim ke dispatcher</button></div>`;
+  <div class="bar"><p class="small muted" style="margin:0;text-align:center">Periksa lagi sebelum kirim. Kalau ada yang salah setelah terkirim, isi P2H ulang untuk unit dan shift yang sama: otomatis tercatat sebagai revisi.</p><button class="btn" data-act="sendP2H">${IC.send} Kirim ke dispatcher</button></div>`;
 }
 
 /* ----- Lapor kerusakan ----- */
@@ -477,7 +484,8 @@ function vLapor(){const d=S.dmg;
       <textarea id="lk-${esc(k)}" data-model="dmg.ket.${esc(k)}" placeholder="Keterangan kerusakan ${esc(k.toLowerCase())}" style="min-height:64px">${esc(ket)}</textarea>
       ${photoGrid("lk:"+k,foto,MAX_FOTO.lk,k)}
     </section>`}).join("");
-  return `<div class="flowtitle"><h1>Lapor kerusakan</h1><p class="sub"><span class="plate">${esc(unit())}</span></p></div>
+  return `<div class="flowtitle"><h1>Lapor kerusakan</h1></div>
+  ${idCard()}
   <section class="card"><div class="row2">
     <label class="f"><span class="req">Hari dan tanggal pelaporan</span><input type="date" id="dtgl" data-model="dmg.tgl" value="${esc(d.tgl||"")}"></label>
     <label class="f">Odometer<input type="number" id="dkm" data-model="dmg.km" inputmode="numeric" placeholder="Opsional" value="${esc(d.km||"")}"></label>
@@ -491,9 +499,9 @@ function vLapor(){const d=S.dmg;
 function vHasil(){const h=S.hasil,st=S.send||{};
   const ico={ok:IC.check,warn:IC.bang,bad:IC.x}[h.cls];
   const sendst=st.state==="sending"?`<div class="sendst wait" role="status"><span class="spin"></span>Mengirim ke dispatcher…</div>`
-    :st.state==="ok"?`<div class="sendst ok" role="status">${IC.check}Terkirim ke dispatcher${st.uji?" (mode uji)":""}</div>${st.uji?"":st.driverOk===false?`<p class="small" style="color:var(--warn);text-align:center">Ringkasan ke WA kamu gagal terkirim. Cek No. HP di Beranda.</p>`:`<p class="small muted" style="text-align:center">Ringkasan juga dikirim ke WA ${esc(S.hp.trim())}.</p>`}`
+    :st.state==="ok"?`<div class="sendst ok" role="status">${IC.check}Terkirim ke dispatcher${st.uji?" (mode uji)":""}</div>${st.uji?"":st.driverOk===false?`<p class="small" style="color:var(--warn);text-align:center">Ringkasan ke WA driver gagal terkirim. Cek No. HP driver.</p>`:`<p class="small muted" style="text-align:center">Ringkasan juga dikirim ke WA ${esc(S.hp.trim())}.</p>`}`
     :st.state==="err"?`<div class="sendst bad" role="alert">${IC.x}Gagal terkirim</div><p class="small" style="color:var(--bad)">${esc(st.err)}. Periksa sinyal lalu coba lagi. Data belum hilang.</p><button class="btn" data-act="retry">Kirim ulang</button>`:"";
-  return `<div class="result"><div class="big ${h.cls}">${ico}</div><h1>${esc(h.title)}</h1><p class="muted">${esc(h.sub)}</p>
+  return `<div class="result"><div class="big ${h.cls}">${ico}</div>${h.nama?`<p class="muted" style="font-weight:700">${esc(h.nama)}${h.unit?" · "+esc(h.unit):""}</p>`:""}<h1>${esc(h.title)}</h1><p class="muted">${esc(h.sub)}</p>
     ${h.list?.length?`<ul>${h.list.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}</div>
   ${sendst}
   ${st.uji?`<p class="small muted">API_URL belum diisi, jadi pesan tidak benar-benar dikirim.</p>`:""}
@@ -504,15 +512,12 @@ function vHasil(){const h=S.hasil,st=S.send||{};
 /* ===== Aksi ===== */
 const ACT={
   home:()=>go("home"),
-  editId:()=>{S.editId=true;render()},
-  shift:el=>{S.shift=el.dataset.v;rerender()},
-  saveId:()=>{if(!nama()||!unit()){S.err="Pilih nama driver, lalu isi No. HP dan nomor lambung.";rerender();return}
-    if(!hpOk(S.hp)){S.err="No. HP tidak valid. Contoh: 081234567890.";rerender();return}
-    S.err="";S.unitNo=unit();if(DRIVERS.includes(nama().toUpperCase()))S.nama=nama().toUpperCase();S.namaLain=false;S.editId=false;S.mcu=null;resetP2H();save();render();toast("Identitas disimpan")},
-  startP2H:()=>{S.revisiDari=null;resetP2H(false);S.tgl=todayISO();S.step=S.mcu?.fit?2:1;go("p2h")},
-  startLapor:()=>{S.dmg={ket:{},foto:{},km:S.km||"",tgl:todayISO()};go("lapor")},
+  startP2H:()=>{S.revisiDari=null;resetId();S.mcu=null;resetP2H(true);S.tgl=todayISO();S.step=1;go("p2h")},
+  startLapor:()=>{resetId();S.dmg={ket:{},foto:{},km:"",tgl:todayISO()};go("lapor")},
   m:el=>{S.m[el.dataset.k]=el.dataset.v;S.err="";rerender()},
   cekMCU:()=>{const m=S.m;
+    const ei=cekId();if(ei){S.err=ei;rerender();return}
+    S.unitNo=unit();if(DRIVERS.includes(nama().toUpperCase()))S.nama=nama().toUpperCase();ingatProfil();
     if(m.tidur==null||m.tidur===""||!m.sis||!m.dia||!m.obat||!m.alkohol||!m.keluhan){S.err="Lengkapi jam tidur, tensi, dan semua pertanyaan.";rerender();return}
     if(!m.siap){S.err="Centang pernyataan siap bekerja untuk melanjutkan.";rerender();return}
     const a=[],t=+m.tidur,s=+m.sis,d=+m.dia;
@@ -523,15 +528,14 @@ const ACT={
     if(S.mcu.fit){S.step=2;render();scrollTo(0,0);toast("MCU lolos. Lanjut cek unit.");return}
     const id="MCU-"+stamp();
     S.lastMsg=msgMCU("dispatcher",id);
-    S.hasil={cls:"bad",title:"Tidak fit mengemudi",sub:"Kamu belum boleh membawa kendaraan. Dispatcher diberi tahu untuk mengatur pengganti.",list:a,
-      actions:[{act:"ulangMCU",label:"Isi ulang MCU",cls:"sec"},{act:"home",label:"Kembali ke beranda",cls:"sec"}]};
+    S.hasil={cls:"bad",nama:nama(),unit:unit(),title:"Tidak fit mengemudi",sub:"Belum boleh membawa kendaraan. Dispatcher diberi tahu untuk mengatur pengganti.",list:a,
+      actions:[{act:"startP2H",label:"Isi P2H driver lain"},{act:"ulangMCU",label:"Isi ulang MCU driver ini",cls:"sec"},{act:"home",label:"Kembali ke beranda",cls:"sec"}]};
     addHistory({id,type:"mcu",judul:"MCU tidak fit",cls:"bad",label:"Tidak fit"});
     go("hasil");
     kirim("mcu",S.lastMsg,{id,ringkas:msgMCU("driver",id),data:{alasan:a,tidur:t,tensi:`${s}/${d}`,obat:m.obat,alkohol:m.alkohol,keluhan:m.keluhan,ket:m.ket||""}});
   },
   ulangMCU:()=>{S.mcu=null;S.m={};S.step=1;go("p2h")},
   ans:el=>{S.ans[+el.dataset.i]=el.dataset.v;S.err="";rerender()},
-  revisi:()=>{const p=p2hToday();if(!p)return;S.revisiDari=p.id;resetP2H(false);S.tgl=todayISO();S.step=S.mcu?.fit?2:1;go("p2h")},
   allOkAll:()=>{FLAT.forEach((f,i)=>{if(!S.ans[i])S.ans[i]="B"});S.err="";rerender();toast("Semua item ditandai Baik. Ubah yang bermasalah.")},
   allOk:el=>{const ci=+el.dataset.c;FLAT.forEach((f,i)=>{if(f.ci===ci&&!S.ans[i])S.ans[i]="B"});rerender()},
   step:el=>{S.step=+el.dataset.v;render();scrollTo(0,0)},
@@ -546,15 +550,16 @@ const ACT={
     S.err="";S.step=3;render();scrollTo(0,0);
   },
   sendP2H:()=>{
+    S.revisiDari=p2hToday()?.id||null;
     const t=temuanP2H(),st=statusP2H(t),id="P2H-"+stamp();
     S.result={id,st,t};
     S.lastMsg=msgP2H(id,st,t,"dispatcher");
     const photos=[];t.forEach(x=>x.foto.forEach((f,k)=>photos.push({label:x.nama+(x.foto.length>1?` (${k+1})`:""),data:f.data})));
     S.fotoExtra.forEach((f,k)=>photos.push({label:"Foto tambahan"+(S.fotoExtra.length>1?` ${k+1}`:""),data:f.data}));
-    S.hasil={cls:st.cls,title:st.label.charAt(0)+st.label.slice(1).toLowerCase(),
+    S.hasil={cls:st.cls,nama:nama(),unit:unit(),title:st.label.charAt(0)+st.label.slice(1).toLowerCase(),
       sub:st.cls==="bad"?"Unit tidak boleh dioperasikan sampai diperbaiki.":st.cls==="warn"?"Boleh jalan. Temuan sudah diteruskan ke dispatcher.":"Selamat jalan, utamakan keselamatan.",
       list:t.map(temuanTeks),
-      actions:[{act:"home",label:"Kembali ke beranda",cls:"sec"}]};
+      actions:[{act:"startP2H",label:"Isi P2H driver lain"},{act:"home",label:"Kembali ke beranda",cls:"sec"}]};
     const rev=S.revisiDari;
     addHistory({id,type:"p2h",judul:(rev?"Revisi P2H ":"P2H ")+unit(),cls:st.cls,label:st.short,shift:S.shift});
     go("hasil");
@@ -564,6 +569,7 @@ const ACT={
     S.revisiDari=null;
   },
   sendLapor:()=>{const d=S.dmg;
+    const ei=cekId();if(ei){S.err=ei;rerender();return}
     const isi=LK.map(([k])=>({k,ket:(d.ket[k]||"").trim(),foto:d.foto[k]||[]})).filter(x=>x.ket||x.foto.length);
     let msg="";
     if(!d.tgl)msg+="Isi tanggal pelaporan. ";
@@ -572,9 +578,10 @@ const ACT={
     if(noKet.length)msg+=`Keterangan belum diisi: ${noKet.join(", ")}. `;
     if(noFoto.length)msg+=`Foto belum ada: ${noFoto.join(", ")}.`;
     if(msg){S.err=msg.trim();rerender();return}
+    S.unitNo=unit();if(DRIVERS.includes(nama().toUpperCase()))S.nama=nama().toUpperCase();ingatProfil();
     const id="LK-"+stamp();
     S.lastMsg=msgLapor(id,isi,"dispatcher");
-    S.hasil={cls:"warn",title:"Laporan dibuat",sub:`No. ${id}. Dispatcher akan menindaklanjuti laporanmu.`,list:isi.map(x=>x.k+": "+x.ket.replace(/\n/g,"; ")),
+    S.hasil={cls:"warn",nama:nama(),unit:unit(),title:"Laporan dibuat",sub:`No. ${id}. Dispatcher akan menindaklanjuti laporanmu.`,list:isi.map(x=>x.k+": "+x.ket.replace(/\n/g,"; ")),
       actions:[{act:"startLapor",label:"Buat laporan lain",cls:"sec"},{act:"home",label:"Kembali ke beranda",cls:"sec"}]};
     addHistory({id,type:"lapor",judul:"Kerusakan "+isi.map(x=>x.k).join(", "),cls:"warn",label:isi.length+" kategori"});
     go("hasil");
@@ -587,7 +594,7 @@ const ACT={
 };
 function resetP2H(full=true){S.ans={};S.note={};S.foto={};S.fotoExtra=[];S.catatan="";S.km="";S.tgl=todayISO();S.result=null;S.send=null;S.err="";if(full){S.m={};}}
 function stamp(){const d=new Date(),p=n=>String(n).padStart(2,"0");return `${p(d.getDate())}${p(d.getMonth()+1)}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`}
-function addHistory(h){S.history.unshift({unit:unit(),shift:S.shift,time:new Date(),...h});save()}
+function addHistory(h){S.history.unshift({nama:nama(),unit:unit(),shift:S.shift,time:new Date(),...h});save()}
 function fotoArr(t){if(t==="extra")return S.fotoExtra;const [a,b]=t.split(/:(.*)/);if(a==="lk")return S.dmg.foto[b]||(S.dmg.foto[b]=[]);return S.foto[+b]||(S.foto[+b]=[])}
 function maxFoto(t){return MAX_FOTO[t.split(":")[0]]}
 function setPath(path,val){const k=path.split(".");let o=S;while(k.length>1){const p=k.shift();o=o[p]||(o[p]={})}o[k[0]]=val}
@@ -597,9 +604,11 @@ const app=$("#app"),hdr=$("#hdr");
 [app,hdr].forEach(r=>r.addEventListener("click",e=>{const el=e.target.closest("[data-act]");if(!el||el.disabled)return;e.preventDefault();ACT[el.dataset.act]?.(el)}));
 app.addEventListener("input",e=>{const el=e.target;
   if(el.dataset.model)setPath(el.dataset.model,el.value);
+  if(el.id==="unitNo"){const b=$("#dupBox");if(b)b.innerHTML=dupHtml()}
   if(el.dataset.check)setPath(el.dataset.check,el.checked)});
 app.addEventListener("change",async e=>{const el=e.target;
-  if(el.id==="namaSel"){if(el.value==="__lain"){S.namaLain=true;S.nama=""}else{S.namaLain=false;S.nama=el.value}S.err="";rerender();if(S.namaLain)$("#nama")?.focus();return}
+  if(el.id==="namaSel"){if(el.value==="__lain"){S.namaLain=true;S.nama="";S.hp="";S.unitNo=""}else{S.namaLain=false;S.nama=el.value;pakaiProfil(el.value)}S.err="";rerender();if(S.namaLain)$("#nama")?.focus();return}
+  if(el.id==="shiftSel"){S.shift=el.value;rerender();return}
   if(!el.dataset.foto)return;
   const t=el.dataset.foto,arr=fotoArr(t),files=[...el.files].slice(0,maxFoto(t)-arr.length);
   for(const f of files){try{arr.push({url:URL.createObjectURL(f),t:new Date(),data:await kompres(f)})}catch(_){toast("Foto tidak bisa dibaca, coba ambil ulang")}}
